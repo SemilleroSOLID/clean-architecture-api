@@ -3,7 +3,7 @@ package com.example.demo.Infrastructure.Persistence.Entities;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "ConvocationTypes")
+@Table(name = "ConvocationTypes", schema = "dbo")
 public class ConvocationTypeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

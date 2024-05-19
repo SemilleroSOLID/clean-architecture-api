@@ -10,7 +10,7 @@ public class CustomResponse<T> {
     public CustomResponse(T data, String message) {
         this.data = data;
         this.message = message;
-        this.codeState = HttpStatus.ACCEPTED.value();
+        this.codeState = HttpStatus.OK.value();
     }
 
     public CustomResponse(T data, int codeState, String message) {

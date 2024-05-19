@@ -1,9 +1,12 @@
 package com.example.demo.Domain.Entities;
 
-public class ConvocationType {
+import java.io.Serializable;
+
+public class ConvocationType implements Serializable {
     private  int id;
     private String convocationTypeName;
 
+    public ConvocationType(){}
     public ConvocationType(int id, String convocationTypeName) {
         this.id = id;
         this.convocationTypeName = convocationTypeName;

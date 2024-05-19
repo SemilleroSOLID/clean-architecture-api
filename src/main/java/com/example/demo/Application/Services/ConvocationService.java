@@ -1,5 +1,6 @@
 package com.example.demo.Application.Services;
 
+import com.example.demo.Application.IConvocationService;
 import com.example.demo.Domain.Entities.ConvocationType;
 import com.example.demo.Domain.Interfaces.IConvocationTypeRepository;
 import org.springframework.beans.factory.annotation.Autowired;

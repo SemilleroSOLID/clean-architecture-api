@@ -1,4 +1,4 @@
-package com.example.demo.Application.Services;
+package com.example.demo.Application;
 
 import com.example.demo.Domain.Entities.ConvocationType;
 
