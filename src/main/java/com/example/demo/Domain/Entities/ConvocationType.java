@@ -7,6 +7,7 @@ public class ConvocationType implements Serializable {
     private String convocationTypeName;
 
     public ConvocationType(){}
+
     public ConvocationType(int id, String convocationTypeName) {
         this.id = id;
         this.convocationTypeName = convocationTypeName;
