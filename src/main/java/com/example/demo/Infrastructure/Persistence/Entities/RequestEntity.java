@@ -2,6 +2,9 @@ package com.example.demo.Infrastructure.Persistence.Entities;
 
 import jakarta.persistence.*;
 
+import java.sql.Date;
+import java.util.Set;
+
 @Entity
 @Table(name = "Request", schema = "dbo")
 public class RequestEntity {

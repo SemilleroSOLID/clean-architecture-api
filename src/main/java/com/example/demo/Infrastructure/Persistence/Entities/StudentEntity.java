@@ -2,6 +2,8 @@ package com.example.demo.Infrastructure.Persistence.Entities;
 
 import jakarta.persistence.*;
 
+import java.util.Set;
+
 @Entity
 @Table(name = "Student", schema = "dbo")
 public class StudentEntity {
@@ -15,10 +17,10 @@ public class StudentEntity {
      @Column(name = "program", nullable = false, length = 255)
     private String program;
 
-     @Column(name = "average", nullable = false, length = 255)
+     @Column(name = "average", nullable = false)
     private Integer average;
 
-     @Column(name = "stratum", nullable = false, length = 255)
+     @Column(name = "stratum", nullable = false)
     private Integer stratum;
 
     @OneToMany(mappedBy="student")

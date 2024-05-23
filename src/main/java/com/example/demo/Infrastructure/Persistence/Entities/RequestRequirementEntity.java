@@ -2,6 +2,8 @@ package com.example.demo.Infrastructure.Persistence.Entities;
 
 import jakarta.persistence.*;
 
+import java.io.File;
+
 @Entity
 @Table(name = "RequestRequirement", schema = "dbo")
 public class RequestRequirementEntity {
@@ -26,7 +28,7 @@ public class RequestRequirementEntity {
     private RequestEntity request;
     
     @ManyToOne
-    @JoinColumn(name="convocationRequirementId", nullable=false)
+    @JoinColumn(name="id", nullable=false)
     private ConvocationRequirementEntity convocationRequirement;
 
     public Integer getId() {

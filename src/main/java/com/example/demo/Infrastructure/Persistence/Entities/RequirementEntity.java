@@ -2,6 +2,8 @@ package com.example.demo.Infrastructure.Persistence.Entities;
 
 import jakarta.persistence.*;
 
+import java.util.Set;
+
 @Entity
 @Table(name = "Requirement", schema = "dbo")
 public class RequirementEntity {
