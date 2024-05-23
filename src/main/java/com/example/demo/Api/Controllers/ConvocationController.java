@@ -2,6 +2,7 @@ package com.example.demo.Api.Controllers;
 
 import com.example.demo.Application.Dtos.CustomResponse;
 import com.example.demo.Application.Services.ConvocationService;
+import com.example.demo.Domain.Entities.Convocation;
 import com.example.demo.Domain.Entities.ConvocationType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
