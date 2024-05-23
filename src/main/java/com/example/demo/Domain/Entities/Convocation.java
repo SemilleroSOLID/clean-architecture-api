@@ -8,5 +8,4 @@ public class Convocation {
     private Date endDate;
     private String title;
     private String description;
-    //requirements
 }
