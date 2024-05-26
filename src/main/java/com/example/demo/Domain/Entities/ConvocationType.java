@@ -28,4 +28,12 @@ public class ConvocationType implements Serializable {
     public void setConvocationTypeName(String convocationTypeName) {
         this.convocationTypeName = convocationTypeName;
     }
+
+    @Override
+    public String toString() {
+        return "ConvocationType{" +
+                "id=" + id +
+                ", convocationTypeName='" + convocationTypeName + '\'' +
+                '}';
+    }
 }

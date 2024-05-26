@@ -68,4 +68,16 @@ public class Student {
     public void setStratum(int stratum) {
         this.stratum = stratum;
     }
+
+    @Override
+    public String toString() {
+        return "Student{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", program='" + program + '\'' +
+                ", average=" + average +
+                ", stratum=" + stratum +
+                ", studentRequestList=" + studentRequestList +
+                '}';
+    }
 }

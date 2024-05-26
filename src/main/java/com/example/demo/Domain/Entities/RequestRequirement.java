@@ -38,4 +38,13 @@ public class RequestRequirement {
     public void setAttachment(File attachment) {
         this.attachment = attachment;
     }
+
+    @Override
+    public String toString() {
+        return "RequestRequirement{" +
+                "id=" + id +
+                ", value='" + value + '\'' +
+                ", attachment=" + attachment +
+                '}';
+    }
 }

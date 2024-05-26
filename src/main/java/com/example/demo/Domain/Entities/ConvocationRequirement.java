@@ -58,4 +58,15 @@ public class ConvocationRequirement {
     public void setDescription(String description) {
         this.description = description;
     }
+
+    @Override
+    public String toString() {
+        return "ConvocationRequirement{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", requiredValue='" + requiredValue + '\'' +
+                ", conditional=" + conditional +
+                ", description='" + description + '\'' +
+                '}';
+    }
 }

@@ -104,7 +104,8 @@ public class Convocation {
 
     @Override
     public String toString(){
-        String message = "Id: " + id + "\n" +
+        return "Convocation{" +
+                "id: " + id + "\n" +
                 "Title: " + title + "\n" +
                 "Description: " + description + "\n" +
                 "Type: " + type + "\n" +
@@ -113,6 +114,5 @@ public class Convocation {
                 "State: " + state + "\n" +
                 "Convocation Requirement List: " + convocationRequirements + "\n" +
                 "Request List: " + requestList + "\n";
-        return message;
     }
 }

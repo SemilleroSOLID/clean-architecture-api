@@ -51,4 +51,14 @@ public class Request {
     public void setRequestRequirementList(List<RequestRequirement> requestRequirementList) {
         this.requestRequirementList = requestRequirementList;
     }
+
+    @Override
+    public String toString() {
+        return "Request{" +
+                "id=" + id +
+                ", creationDate=" + creationDate +
+                ", state=" + state +
+                ", requestRequirementList=" + requestRequirementList +
+                '}';
+    }
 }
