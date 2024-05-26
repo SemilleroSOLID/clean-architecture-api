@@ -2,7 +2,7 @@ package com.example.demo.Infrastructure.Persistence.Entities;
 
 import jakarta.persistence.*;
 
-import java.util.Set;
+import java.util.List;
 
 @Entity
 @Table(name = "Student", schema = "dbo")
@@ -24,7 +24,7 @@ public class StudentEntity {
     private Integer stratum;
 
     @OneToMany(mappedBy="student")
-    private Set<RequestEntity> requests;
+    private List<RequestEntity> requests;
 
     public Integer getId() {
         return id;
@@ -66,11 +66,11 @@ public class StudentEntity {
         this.stratum = stratum;
     }
 
-    public Set<RequestEntity> getRequests() {
+    public List<RequestEntity> getRequests() {
         return requests;
     }
 
-    public void setRequests(Set<RequestEntity> requests) {
+    public void setRequests(List<RequestEntity> requests) {
         this.requests = requests;
     }
 

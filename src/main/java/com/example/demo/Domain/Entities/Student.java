@@ -1,8 +1,9 @@
 package com.example.demo.Domain.Entities;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class Student {
+public class Student implements Serializable {
     private int id;
     private String name;
     private String program;

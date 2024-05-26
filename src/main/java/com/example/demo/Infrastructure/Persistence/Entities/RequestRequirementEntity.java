@@ -24,11 +24,11 @@ public class RequestRequirementEntity {
     private Integer convocationRequirementId;
 
     @ManyToOne
-    @JoinColumn(name="requestId", nullable=false)
+    @JoinColumn(name="requestId", referencedColumnName = "id", insertable = false, updatable = false)
     private RequestEntity request;
     
     @ManyToOne
-    @JoinColumn(name="id", nullable=false)
+    @JoinColumn(name="id", referencedColumnName = "id", insertable = false, updatable = false)
     private ConvocationRequirementEntity convocationRequirement;
 
     public Integer getId() {

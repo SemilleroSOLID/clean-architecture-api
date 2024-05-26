@@ -3,7 +3,7 @@ package com.example.demo.Infrastructure.Persistence.Entities;
 import jakarta.persistence.*;
 
 import java.sql.Date;
-import java.util.Set;
+import java.util.List;
 
 @Entity
 @Table(name = "Convocation", schema = "dbo")
@@ -30,11 +30,12 @@ public class ConvocationEntity {
      @Column(name = "stateConvocationId", nullable = false, length = 255)
     private Integer stateConvocationId;
     
-    @OneToMany(mappedBy="convocation")
-    private Set<ConvocationRequirementEntity> convocationRequirements;
+    @OneToMany(mappedBy="convocation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "convocationId")
+    private List<ConvocationRequirementEntity> convocationRequirements;
 
     @OneToMany(mappedBy="convocation")
-    private Set<RequestEntity> Requests;
+    private List<RequestEntity> Requests;
     
     public Integer getId() {
         return id;
@@ -92,19 +93,19 @@ public class ConvocationEntity {
         this.stateConvocationId = stateConvocationId;
     }
 
-    public Set<ConvocationRequirementEntity> getConvocationRequirements() {
+    public List<ConvocationRequirementEntity> getConvocationRequirements() {
         return convocationRequirements;
     }
 
-    public void setConvocationRequirements(Set<ConvocationRequirementEntity> convocationRequirements) {
+    public void setConvocationRequirements(List<ConvocationRequirementEntity> convocationRequirements) {
         this.convocationRequirements = convocationRequirements;
     }
 
-    public Set<RequestEntity> getRequests() {
+    public List<RequestEntity> getRequests() {
         return Requests;
     }
 
-    public void setRequests(Set<RequestEntity> Requests) {
+    public void setRequests(List<RequestEntity> Requests) {
         this.Requests = Requests;
     }
 

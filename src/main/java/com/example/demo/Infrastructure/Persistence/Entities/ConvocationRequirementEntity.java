@@ -2,7 +2,7 @@ package com.example.demo.Infrastructure.Persistence.Entities;
 
 import jakarta.persistence.*;
 
-import java.util.Set;
+import java.util.List;
 
 @Entity
 @Table(name = "ConvocationRequirement", schema = "dbo")
@@ -34,11 +34,11 @@ public class ConvocationRequirementEntity {
     private RequirementEntity requirement;
 
     @ManyToOne
-    @JoinColumn(name="convocationId", nullable=false)
+    @JoinColumn(name="convocationId", referencedColumnName = "id", insertable = false, updatable = false)
     private ConvocationEntity convocation;
 
     @OneToMany(mappedBy="convocationRequirement")
-    private Set<RequestRequirementEntity> requestRequirements;
+    private List<RequestRequirementEntity> requestRequirements;
 
     public Integer getId() {
         return id;
@@ -112,11 +112,11 @@ public class ConvocationRequirementEntity {
         this.convocation = convocation;
     }
 
-    public Set<RequestRequirementEntity> getRequestRequirements() {
+    public List<RequestRequirementEntity> getRequestRequirements() {
         return requestRequirements;
     }
 
-    public void setRequestRequirements(Set<RequestRequirementEntity> requestRequirements) {
+    public void setRequestRequirements(List<RequestRequirementEntity> requestRequirements) {
         this.requestRequirements = requestRequirements;
     }
 

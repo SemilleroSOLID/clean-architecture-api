@@ -2,10 +2,11 @@ package com.example.demo.Domain.Entities;
 
 import com.example.demo.Domain.Enums.EnumStateRequest;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
-public class Request {
+public class Request implements Serializable {
     private int id;
     private Date creationDate;
     private EnumStateRequest state;

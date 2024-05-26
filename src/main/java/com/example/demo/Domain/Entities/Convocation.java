@@ -1,24 +1,26 @@
 package com.example.demo.Domain.Entities;
 
 import com.example.demo.Domain.Enums.EnumConvocationType;
+import com.example.demo.Domain.Enums.EnumStateRequest;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
-public class Convocation {
+public class Convocation implements Serializable {
     private int id;
     private String title;
     private String description;
     private EnumConvocationType type;
     private Date startDate;
     private Date endDate;
-    private String state;
+    private EnumStateRequest state;
     private List<ConvocationRequirement> convocationRequirements;
     private List<Request> requestList;
 
     public Convocation(){}
 
-    public Convocation(int id, String title, String description, EnumConvocationType type, Date startDate, Date endDate, String state, List<ConvocationRequirement> convocationRequirements, List<Request> requestList) {
+    public Convocation(int id, String title, String description, EnumConvocationType type, Date startDate, Date endDate, EnumStateRequest state, List<ConvocationRequirement> convocationRequirements, List<Request> requestList) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -46,11 +48,11 @@ public class Convocation {
         this.convocationRequirements = convocationRequirements;
     }
 
-    public String getState() {
+    public EnumStateRequest getState() {
         return state;
     }
 
-    public void setState(String state) {
+    public void setState(EnumStateRequest state) {
         this.state = state;
     }
 

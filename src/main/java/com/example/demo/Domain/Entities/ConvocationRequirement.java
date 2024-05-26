@@ -2,7 +2,9 @@ package com.example.demo.Domain.Entities;
 
 import com.example.demo.Domain.Enums.EnumConditionConvocation;
 
-public class ConvocationRequirement {
+import java.io.Serializable;
+
+public class ConvocationRequirement implements Serializable {
     private int id;
     private String name;
     private String requiredValue;

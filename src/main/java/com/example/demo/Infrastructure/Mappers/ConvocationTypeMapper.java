@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ConvocationTypeMapper implements IConvocationTypeMapper {
-    private static ModelMapper modelMapper;
+    private final ModelMapper modelMapper;
     public ConvocationTypeMapper(){
         this.modelMapper = new ModelMapper();
     }

@@ -1,6 +1,8 @@
 package com.example.demo.Domain.Entities;
 
-public class Requirement {
+import java.io.Serializable;
+
+public class Requirement implements Serializable {
     private int id;
     private String name;
 

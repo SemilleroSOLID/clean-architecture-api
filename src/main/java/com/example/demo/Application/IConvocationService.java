@@ -8,4 +8,5 @@ import java.util.List;
 public interface IConvocationService {
    List<Convocation> getAllConvocation();
    List<ConvocationType> getAllConvocationTypes();
+   Convocation createConvocation(Convocation convocation);
 }

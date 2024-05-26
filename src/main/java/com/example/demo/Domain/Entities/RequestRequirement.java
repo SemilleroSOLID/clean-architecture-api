@@ -1,8 +1,9 @@
 package com.example.demo.Domain.Entities;
 
 import java.io.File;
+import java.io.Serializable;
 
-public class RequestRequirement {
+public class RequestRequirement implements Serializable {
     private int id;
     private String value;
     private File attachment;

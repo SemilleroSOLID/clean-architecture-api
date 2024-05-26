@@ -2,7 +2,7 @@ package com.example.demo.Infrastructure.Persistence.Entities;
 
 import jakarta.persistence.*;
 
-import java.util.Set;
+import java.util.List;
 
 @Entity
 @Table(name = "Requirement", schema = "dbo")
@@ -15,7 +15,7 @@ public class RequirementEntity {
     private String requirementName;
 
     @OneToMany(mappedBy="requirement")
-    private Set<ConvocationRequirementEntity> convocationRequirements;
+    private List<ConvocationRequirementEntity> convocationRequirements;
 
     public Integer getId() {
         return id;
@@ -33,11 +33,11 @@ public class RequirementEntity {
         this.requirementName = requirementName;
     }
 
-    public Set<ConvocationRequirementEntity> getConvocationRequirements() {
+    public List<ConvocationRequirementEntity> getConvocationRequirements() {
         return convocationRequirements;
     }
 
-    public void setConvocationRequirements(Set<ConvocationRequirementEntity> convocationRequirements) {
+    public void setConvocationRequirements(List<ConvocationRequirementEntity> convocationRequirements) {
         this.convocationRequirements = convocationRequirements;
     }
 

@@ -3,7 +3,7 @@ package com.example.demo.Infrastructure.Persistence.Entities;
 import jakarta.persistence.*;
 
 import java.sql.Date;
-import java.util.Set;
+import java.util.List;
 
 @Entity
 @Table(name = "Request", schema = "dbo")
@@ -25,14 +25,14 @@ public class RequestEntity {
     private Integer studentId;
 
     @OneToMany(mappedBy="request")
-    private Set<RequestRequirementEntity> requestRequirements;
+    private List<RequestRequirementEntity> requestRequirements;
 
     @ManyToOne
-    @JoinColumn(name="studentId", nullable=false)
+    @JoinColumn(name="studentId",  referencedColumnName = "id", insertable = false, updatable = false)
     private StudentEntity student;
 
     @ManyToOne
-    @JoinColumn(name="convocationId", nullable=false)
+    @JoinColumn(name="convocationId",  referencedColumnName = "id", insertable = false, updatable = false)
     private ConvocationEntity convocation;
 
     public Integer getId() {
@@ -75,11 +75,11 @@ public class RequestEntity {
         this.studentId = studentId;
     }
 
-    public Set<RequestRequirementEntity> getRequestRequirements() {
+    public List<RequestRequirementEntity> getRequestRequirements() {
         return requestRequirements;
     }
 
-    public void setRequestRequirements(Set<RequestRequirementEntity> requestRequirements) {
+    public void setRequestRequirements(List<RequestRequirementEntity> requestRequirements) {
         this.requestRequirements = requestRequirements;
     }
 
