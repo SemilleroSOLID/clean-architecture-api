@@ -13,12 +13,12 @@ public class Convocation {
     private Date startDate;
     private Date endDate;
     private String state;
-    private List<ConvocationRequirement> convocationRequirementList;
+    private List<ConvocationRequirement> convocationRequirements;
     private List<Request> requestList;
 
     public Convocation(){}
 
-    public Convocation(int id, String title, String description, EnumConvocationType type, Date startDate, Date endDate, String state, List<ConvocationRequirement> convocationRequirementList, List<Request> requestList) {
+    public Convocation(int id, String title, String description, EnumConvocationType type, Date startDate, Date endDate, String state, List<ConvocationRequirement> convocationRequirements, List<Request> requestList) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -26,7 +26,7 @@ public class Convocation {
         this.startDate = startDate;
         this.endDate = endDate;
         this.state = state;
-        this.convocationRequirementList = convocationRequirementList;
+        this.convocationRequirements = convocationRequirements;
         this.requestList = requestList;
     }
 
@@ -38,12 +38,12 @@ public class Convocation {
         this.requestList = requestList;
     }
 
-    public List<ConvocationRequirement> getConvocationRequirementList() {
-        return convocationRequirementList;
+    public List<ConvocationRequirement> getConvocationRequirements() {
+        return convocationRequirements;
     }
 
-    public void setConvocationRequirementList(List<ConvocationRequirement> convocationRequirementList) {
-        this.convocationRequirementList = convocationRequirementList;
+    public void setConvocationRequirements(List<ConvocationRequirement> convocationRequirements) {
+        this.convocationRequirements = convocationRequirements;
     }
 
     public String getState() {
@@ -100,5 +100,19 @@ public class Convocation {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    @Override
+    public String toString(){
+        String message = "Id: " + id + "\n" +
+                "Title: " + title + "\n" +
+                "Description: " + description + "\n" +
+                "Type: " + type + "\n" +
+                "Start Date: " + startDate + "\n" +
+                "End Date: " + endDate + "\n" +
+                "State: " + state + "\n" +
+                "Convocation Requirement List: " + convocationRequirements + "\n" +
+                "Request List: " + requestList + "\n";
+        return message;
     }
 }
