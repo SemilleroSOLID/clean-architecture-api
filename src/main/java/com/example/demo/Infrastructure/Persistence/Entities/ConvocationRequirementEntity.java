@@ -29,17 +29,6 @@ public class ConvocationRequirementEntity {
      @Column(name = "requirementId", nullable = false)
     private Integer requirementId;
 
-    @ManyToOne
-    @JoinColumn(name="requirementId", referencedColumnName = "id", insertable = false, updatable = false)
-    private RequirementEntity requirement;
-
-    @ManyToOne
-    @JoinColumn(name="convocationId", referencedColumnName = "id", insertable = false, updatable = false)
-    private ConvocationEntity convocation;
-
-    @OneToMany(mappedBy="convocationRequirement")
-    private List<RequestRequirementEntity> requestRequirements;
-
     public Integer getId() {
         return id;
     }
@@ -96,28 +85,5 @@ public class ConvocationRequirementEntity {
         this.requirementId = requirementId;
     }
 
-    public RequirementEntity getRequirement() {
-        return requirement;
-    }
-
-    public void setRequirement(RequirementEntity requirement) {
-        this.requirement = requirement;
-    }
-
-    public ConvocationEntity getConvocation() {
-        return convocation;
-    }
-
-    public void setConvocation(ConvocationEntity convocation) {
-        this.convocation = convocation;
-    }
-
-    public List<RequestRequirementEntity> getRequestRequirements() {
-        return requestRequirements;
-    }
-
-    public void setRequestRequirements(List<RequestRequirementEntity> requestRequirements) {
-        this.requestRequirements = requestRequirements;
-    }
 
 }

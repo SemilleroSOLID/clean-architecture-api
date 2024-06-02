@@ -23,9 +23,6 @@ public class StudentEntity {
      @Column(name = "stratum", nullable = false)
     private Integer stratum;
 
-    @OneToMany(mappedBy="student")
-    private List<RequestEntity> requests;
-
     public Integer getId() {
         return id;
     }
@@ -65,13 +62,4 @@ public class StudentEntity {
     public void setStratum(Integer stratum) {
         this.stratum = stratum;
     }
-
-    public List<RequestEntity> getRequests() {
-        return requests;
-    }
-
-    public void setRequests(List<RequestEntity> requests) {
-        this.requests = requests;
-    }
-
 }

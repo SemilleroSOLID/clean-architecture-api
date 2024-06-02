@@ -14,9 +14,6 @@ public class RequirementEntity {
     @Column(name = "requirementName", nullable = false, length = 255)
     private String requirementName;
 
-    @OneToMany(mappedBy="requirement")
-    private List<ConvocationRequirementEntity> convocationRequirements;
-
     public Integer getId() {
         return id;
     }
@@ -31,14 +28,6 @@ public class RequirementEntity {
 
     public void setRequirementName(String requirementName) {
         this.requirementName = requirementName;
-    }
-
-    public List<ConvocationRequirementEntity> getConvocationRequirements() {
-        return convocationRequirements;
-    }
-
-    public void setConvocationRequirements(List<ConvocationRequirementEntity> convocationRequirements) {
-        this.convocationRequirements = convocationRequirements;
     }
 
 }

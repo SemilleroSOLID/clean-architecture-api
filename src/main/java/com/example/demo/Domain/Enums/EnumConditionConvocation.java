@@ -19,4 +19,13 @@ public enum EnumConditionConvocation {
     public void setValue(int value) {
         this.value = value;
     }
+
+    public static EnumConditionConvocation fromValue(int value) {
+        for (EnumConditionConvocation state : values()) {
+            if (state.value == value) {
+                return state;
+            }
+        }
+        throw new IllegalArgumentException("Invalid ConvocationState value: " + value);
+    }
 }

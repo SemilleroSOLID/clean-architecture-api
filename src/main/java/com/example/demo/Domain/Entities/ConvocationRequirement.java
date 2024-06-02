@@ -10,6 +10,8 @@ public class ConvocationRequirement implements Serializable {
     private String requiredValue;
     private EnumConditionConvocation conditional;
     private String description;
+    private int ConvocationId;
+    private Convocation convocation;
 
     public ConvocationRequirement(){}
 
@@ -60,7 +62,21 @@ public class ConvocationRequirement implements Serializable {
     public void setDescription(String description) {
         this.description = description;
     }
+    public Convocation getConvocation() {
+        return convocation;
+    }
 
+    public void setConvocation(Convocation convocation) {
+        this.convocation = convocation;
+    }
+
+    public int getConvocationId() {
+        return ConvocationId;
+    }
+
+    public void setConvocationId(int convocationId) {
+        ConvocationId = convocationId;
+    }
     @Override
     public String toString() {
         return "ConvocationRequirement{" +

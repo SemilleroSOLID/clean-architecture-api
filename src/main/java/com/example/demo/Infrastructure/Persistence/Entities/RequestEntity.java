@@ -24,17 +24,6 @@ public class RequestEntity {
     @Column(name = "studentId", nullable = false)
     private Integer studentId;
 
-    @OneToMany(mappedBy="request")
-    private List<RequestRequirementEntity> requestRequirements;
-
-    @ManyToOne
-    @JoinColumn(name="studentId",  referencedColumnName = "id", insertable = false, updatable = false)
-    private StudentEntity student;
-
-    @ManyToOne
-    @JoinColumn(name="convocationId",  referencedColumnName = "id", insertable = false, updatable = false)
-    private ConvocationEntity convocation;
-
     public Integer getId() {
         return id;
     }
@@ -73,30 +62,6 @@ public class RequestEntity {
 
     public void setStudentId(Integer studentId) {
         this.studentId = studentId;
-    }
-
-    public List<RequestRequirementEntity> getRequestRequirements() {
-        return requestRequirements;
-    }
-
-    public void setRequestRequirements(List<RequestRequirementEntity> requestRequirements) {
-        this.requestRequirements = requestRequirements;
-    }
-
-    public StudentEntity getStudent() {
-        return student;
-    }
-
-    public void setStudent(StudentEntity student) {
-        this.student = student;
-    }
-
-    public ConvocationEntity getConvocation() {
-        return convocation;
-    }
-
-    public void setConvocation(ConvocationEntity convocation) {
-        this.convocation = convocation;
     }
 
 }

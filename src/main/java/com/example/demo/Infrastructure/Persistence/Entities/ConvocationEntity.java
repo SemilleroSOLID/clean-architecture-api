@@ -26,17 +26,9 @@ public class ConvocationEntity {
 
      @Column(name = "endDate", nullable = false, length = 255)
     private Date endDate;
-
      @Column(name = "stateConvocationId", nullable = false, length = 255)
     private Integer stateConvocationId;
-    
-    @OneToMany(mappedBy="convocation", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "convocationId")
-    private List<ConvocationRequirementEntity> convocationRequirements;
 
-    @OneToMany(mappedBy="convocation")
-    private List<RequestEntity> Requests;
-    
     public Integer getId() {
         return id;
     }
@@ -91,22 +83,6 @@ public class ConvocationEntity {
 
     public void setStateConvocationId(Integer stateConvocationId) {
         this.stateConvocationId = stateConvocationId;
-    }
-
-    public List<ConvocationRequirementEntity> getConvocationRequirements() {
-        return convocationRequirements;
-    }
-
-    public void setConvocationRequirements(List<ConvocationRequirementEntity> convocationRequirements) {
-        this.convocationRequirements = convocationRequirements;
-    }
-
-    public List<RequestEntity> getRequests() {
-        return Requests;
-    }
-
-    public void setRequests(List<RequestEntity> Requests) {
-        this.Requests = Requests;
     }
 
 }

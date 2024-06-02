@@ -17,4 +17,12 @@ public enum EnumStateRequest {
     public void setValue(int value) {
         this.value = value;
     }
+    public static EnumStateRequest fromValue(int value) {
+        for (EnumStateRequest state : values()) {
+            if (state.value == value) {
+                return state;
+            }
+        }
+        throw new IllegalArgumentException("Invalid ConvocationState value: " + value);
+    }
 }

@@ -16,4 +16,13 @@ public enum EnumConvocationType {
     public void setValue(int value) {
         this.value = value;
     }
+
+    public static EnumConvocationType fromValue(int value) {
+        for (EnumConvocationType state : values()) {
+            if (state.value == value) {
+                return state;
+            }
+        }
+        throw new IllegalArgumentException("Invalid ConvocationState value: " + value);
+    }
 }
