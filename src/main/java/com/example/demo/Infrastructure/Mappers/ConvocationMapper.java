@@ -3,9 +3,7 @@ package com.example.demo.Infrastructure.Mappers;
 import com.example.demo.Application.Dtos.ConvocationDto;
 import com.example.demo.Application.Dtos.ConvocationRequirementDto;
 import com.example.demo.Application.Mappers.IConvocationMapper;
-import com.example.demo.Domain.Entities.Convocation;
-import com.example.demo.Domain.Entities.ConvocationRequirement;
-import com.example.demo.Domain.Enums.EnumConditionConvocation;
+import com.example.demo.Domain.Enums.EnumConditionRequirement;
 import com.example.demo.Domain.Enums.EnumConvocationState;
 import com.example.demo.Domain.Enums.EnumConvocationType;
 import com.example.demo.Infrastructure.Persistence.Entities.ConvocationEntity;
@@ -15,7 +13,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class ConvocationMapper implements IConvocationMapper {
@@ -59,7 +56,7 @@ public class ConvocationMapper implements IConvocationMapper {
         List<ConvocationRequirementDto> response = new ArrayList<>();
         convocationRequirementEntities.forEach(convocationRequirementEntity -> {
             ConvocationRequirementDto convocationRequirement = this.modelMapper.map(convocationRequirementEntity, ConvocationRequirementDto.class);
-            convocationRequirement.setConditional(EnumConditionConvocation.fromValue(convocationRequirementEntity.getConditionalId()));
+            convocationRequirement.setConditional(EnumConditionRequirement.fromValue(convocationRequirementEntity.getConditionalId()));
             convocationRequirement.setRequirementId(convocationRequirementEntity.getRequirementId());
             response.add(convocationRequirement);
         });

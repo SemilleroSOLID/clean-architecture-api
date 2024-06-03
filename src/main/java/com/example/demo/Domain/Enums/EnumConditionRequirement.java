@@ -1,14 +1,14 @@
 package com.example.demo.Domain.Enums;
 
-public enum EnumConditionConvocation {
-    EQUAL(1),
-    LESS_OR_EQUAL(2),
-    GREATER_OR_EQUAL(3),
-    LESS(4),
-    GREATER(5);
+public enum EnumConditionRequirement {
+    EQUAL(0),
+    LESS_OR_EQUAL(1),
+    GREATER_OR_EQUAL(2),
+    LESS(3),
+    GREATER(4);
 
     private int value;
-    EnumConditionConvocation(int value){
+    EnumConditionRequirement(int value){
         this.value = value;
     }
 
@@ -20,8 +20,8 @@ public enum EnumConditionConvocation {
         this.value = value;
     }
 
-    public static EnumConditionConvocation fromValue(int value) {
-        for (EnumConditionConvocation state : values()) {
+    public static EnumConditionRequirement fromValue(int value) {
+        for (EnumConditionRequirement state : values()) {
             if (state.value == value) {
                 return state;
             }

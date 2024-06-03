@@ -1,6 +1,6 @@
 package com.example.demo.Domain.Entities;
 
-import com.example.demo.Domain.Enums.EnumConditionConvocation;
+import com.example.demo.Domain.Enums.EnumConditionRequirement;
 
 import java.io.Serializable;
 
@@ -8,14 +8,14 @@ public class ConvocationRequirement implements Serializable {
     private int id;
     private String name;
     private String requiredValue;
-    private EnumConditionConvocation conditional;
+    private EnumConditionRequirement conditional;
     private String description;
     private int ConvocationId;
     private Convocation convocation;
 
     public ConvocationRequirement(){}
 
-    public ConvocationRequirement(int id, String name, String requiredValue, EnumConditionConvocation conditional, String description) {
+    public ConvocationRequirement(int id, String name, String requiredValue, EnumConditionRequirement conditional, String description) {
         this.id = id;
         this.name = name;
         this.requiredValue = requiredValue;
@@ -47,11 +47,11 @@ public class ConvocationRequirement implements Serializable {
         this.requiredValue = requiredValue;
     }
 
-    public EnumConditionConvocation getConditional() {
+    public EnumConditionRequirement getConditional() {
         return conditional;
     }
 
-    public void setConditional(EnumConditionConvocation conditional) {
+    public void setConditional(EnumConditionRequirement conditional) {
         this.conditional = conditional;
     }
 

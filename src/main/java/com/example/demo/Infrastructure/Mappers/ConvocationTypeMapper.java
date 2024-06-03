@@ -14,7 +14,9 @@ public class ConvocationTypeMapper implements IConvocationTypeMapper {
     }
     @Override
     public ConvocationType convocationTypeEntityToConvocationType(final ConvocationTypeEntity convocationTypeEntity){
-        return this.modelMapper.map(convocationTypeEntity, ConvocationType.class);
+        ConvocationType convocationType = this.modelMapper.map(convocationTypeEntity, ConvocationType.class);
+        convocationType.setId(convocationType.getId()-1);
+        return convocationType;
     }
 
     @Override

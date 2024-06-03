@@ -1,6 +1,6 @@
 package com.example.demo.Application.Dtos;
 
-import com.example.demo.Domain.Enums.EnumConditionConvocation;
+import com.example.demo.Domain.Enums.EnumConditionRequirement;
 
 import java.io.Serializable;
 
@@ -8,7 +8,7 @@ public class ConvocationRequirementDto implements Serializable {
     private int id;
     private String name;
     private String requiredValue;
-    private EnumConditionConvocation conditional;
+    private EnumConditionRequirement conditional;
     private String description;
     private int requirementId;
     private int convocationId;
@@ -39,11 +39,11 @@ public class ConvocationRequirementDto implements Serializable {
         this.requiredValue = requiredValue;
     }
 
-    public EnumConditionConvocation getConditional() {
+    public EnumConditionRequirement getConditional() {
         return conditional;
     }
 
-    public void setConditional(EnumConditionConvocation conditional) {
+    public void setConditional(EnumConditionRequirement conditional) {
         this.conditional = conditional;
     }
 
