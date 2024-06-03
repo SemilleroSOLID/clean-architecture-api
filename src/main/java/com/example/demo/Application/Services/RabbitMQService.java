@@ -33,10 +33,16 @@ public class RabbitMQService {
         try{
             this.connect();
             this.config.getExchanges().forEach(this::addExchange);
+            logger.info("Init exchanges ok")
+            this.config.getQueues().forEach(this::createQueue);
         }catch (Exception e){
-
+            logger.error("Error iniciando el proceso", e);
         }
+    }
 
+    public void createQueue(IAmqpQueue queue){
+        this.addQueue(queue);
+        this.config.getBinding().forEach(this::addBinding)
     }
 
     public void addExchange(IAmqpExchange exchange){
@@ -47,17 +53,17 @@ public class RabbitMQService {
         }
     }
 
-    public void addQueue(String queueName){
+    private void addQueue(IAmqpQueue queue){
         try{
-            this.channel.queueDeclare(queueName, true, false, false, null);
+            this.channel.queueDeclare(queue.getName(), true, false, false, queue.getOptions());
         }catch (Exception e){
             logger.error("Error agragando la cola", e);
         }
     }
 
-    public void addBinding(String exchangeName, String queueName, String key){
+    public void addBinding(IAmqpBinding binding){
         try{
-            this.channel.queueBind(queueName, exchangeName, key);
+            this.channel.queueBind(binding.getQueue(), binding.getExchange(), binding.getKey());
         }catch (Exception e){
             logger.error("Error agregando el intermediario", e);
         }
