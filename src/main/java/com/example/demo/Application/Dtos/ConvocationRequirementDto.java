@@ -1,27 +1,19 @@
-package com.example.demo.Domain.Entities;
+package com.example.demo.Application.Dtos;
 
 import com.example.demo.Domain.Enums.EnumConditionRequirement;
 
 import java.io.Serializable;
 
-public class ConvocationRequirement implements Serializable {
+public class ConvocationRequirementDto implements Serializable {
     private int id;
     private String name;
     private String requiredValue;
     private EnumConditionRequirement conditional;
     private String description;
-    private int ConvocationId;
-    private Convocation convocation;
+    private int requirementId;
+    private int convocationId;
 
-    public ConvocationRequirement(){}
-
-    public ConvocationRequirement(int id, String name, String requiredValue, EnumConditionRequirement conditional, String description) {
-        this.id = id;
-        this.name = name;
-        this.requiredValue = requiredValue;
-        this.conditional = conditional;
-        this.description = description;
-    }
+    public ConvocationRequirementDto() {}
 
     public int getId() {
         return id;
@@ -62,29 +54,20 @@ public class ConvocationRequirement implements Serializable {
     public void setDescription(String description) {
         this.description = description;
     }
-    public Convocation getConvocation() {
-        return convocation;
+
+    public int getRequirementId() {
+        return requirementId;
     }
 
-    public void setConvocation(Convocation convocation) {
-        this.convocation = convocation;
+    public void setRequirementId(int requirementId) {
+        this.requirementId = requirementId;
     }
 
     public int getConvocationId() {
-        return ConvocationId;
+        return convocationId;
     }
 
     public void setConvocationId(int convocationId) {
-        ConvocationId = convocationId;
-    }
-    @Override
-    public String toString() {
-        return "ConvocationRequirement{" +
-                "id=" + id +
-                ", name='" + name + '\'' +
-                ", requiredValue='" + requiredValue + '\'' +
-                ", conditional=" + conditional +
-                ", description='" + description + '\'' +
-                '}';
+        this.convocationId = convocationId;
     }
 }
