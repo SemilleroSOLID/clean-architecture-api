@@ -1,7 +1,9 @@
 package com.example.demo.Application.Services;
 
+import com.example.demo.Application.RabbitInterfaces.IAmqpBinding;
 import com.example.demo.Application.RabbitInterfaces.IAmqpConfig;
 import com.example.demo.Application.RabbitInterfaces.IAmqpExchange;
+import com.example.demo.Application.RabbitInterfaces.IAmqpQueue;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.Channel;
@@ -33,7 +35,7 @@ public class RabbitMQService {
         try{
             this.connect();
             this.config.getExchanges().forEach(this::addExchange);
-            logger.info("Init exchanges ok")
+            logger.info("Init exchanges ok");
             this.config.getQueues().forEach(this::createQueue);
         }catch (Exception e){
             logger.error("Error iniciando el proceso", e);
@@ -42,7 +44,7 @@ public class RabbitMQService {
 
     public void createQueue(IAmqpQueue queue){
         this.addQueue(queue);
-        this.config.getBinding().forEach(this::addBinding)
+        this.config.getBinding().forEach(this::addBinding);
     }
 
     public void addExchange(IAmqpExchange exchange){

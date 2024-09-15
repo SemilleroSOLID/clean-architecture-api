@@ -25,6 +25,9 @@ dependencies {
 	//sql server
 	runtimeOnly 'com.microsoft.sqlserver:mssql-jdbc'
 
+	//mysql
+	  implementation 'mysql:mysql-connector-java:8.0.33'
+
 	//ORM
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
