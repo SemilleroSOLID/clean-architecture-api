@@ -10,4 +10,8 @@ Java 18
 
 ### `gradlew build`
 
-Install dependencies and execute the proyect
+For installing dependencies
+
+### `gradlew bootRun`
+
+For Executing the project
