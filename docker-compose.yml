@@ -1,0 +1,27 @@
+version: '3'
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "your_password"
+    ports:
+      - "1435:1433"
+    networks:
+      - mynetwork
+
+  backend:
+    build: ./
+    depends_on:
+      - sqlserver
+    environment:
+      DB_HOST: sqlserver
+      DB_PORT: 1433
+    ports:
+      - "3001:3001"
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
+    driver: bridge
