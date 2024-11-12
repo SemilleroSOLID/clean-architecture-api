@@ -7,6 +7,10 @@ services:
       SA_PASSWORD: "your_password"
     ports:
       - "1435:1433"
+    volumes:
+      - ./create-database.sql:/docker-entrypoint-initdb.d/create-database.sql
+    command: /bin/bash -c "echo 'Starting SQL Server...'; /opt/mssql/bin/sqlservr & sleep 20; /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'your_password' -d master -i /docker-entrypoint-initdb.d/create-database.sql && tail -f /dev/null"
+
     networks:
       - mynetwork
 
