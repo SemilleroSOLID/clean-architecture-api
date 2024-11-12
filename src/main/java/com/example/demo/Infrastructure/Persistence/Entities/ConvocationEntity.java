@@ -28,6 +28,8 @@ public class ConvocationEntity {
     private Date endDate;
      @Column(name = "stateConvocationId", nullable = false, length = 255)
     private Integer stateConvocationId;
+    
+
 
     public Integer getId() {
         return id;
@@ -84,5 +86,6 @@ public class ConvocationEntity {
     public void setStateConvocationId(Integer stateConvocationId) {
         this.stateConvocationId = stateConvocationId;
     }
+
 
 }
