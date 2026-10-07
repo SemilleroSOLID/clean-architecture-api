@@ -2,9 +2,7 @@ package com.example.demo.Infrastructure.Persistence.Repositories;
 
 import com.example.demo.Domain.Entities.ConvocationType;
 import com.example.demo.Domain.Interfaces.IConvocationTypeRepository;
-import com.example.demo.Application.Mappers.IConvocationTypeMapper;
 import com.example.demo.Infrastructure.Persistence.Cruds.IConvocationTypeCrudRepository;
-import com.example.demo.Infrastructure.Persistence.Entities.ConvocationTypeEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -15,14 +13,13 @@ import java.util.List;
 public class ConvocationTypeRepository implements IConvocationTypeRepository {
     @Autowired
     private IConvocationTypeCrudRepository convocationTypeCrudRepository;
-    @Autowired
-    private IConvocationTypeMapper convocationTypeMapper;
 
     @Override
-    public List<ConvocationType> getAll() {
-        Iterable<ConvocationTypeEntity> convocationTypes = convocationTypeCrudRepository.findAll();
+    public List<ConvocationType> findAll() {
         List<ConvocationType> response = new ArrayList<>();
-        convocationTypes.forEach(convocation -> response.add(convocationTypeMapper.convocationTypeEntityToConvocationType(convocation)));
+        // The -1 keeps the ids the front already uses; the type alignment is pending in issue #5.
+        this.convocationTypeCrudRepository.findAll().forEach(convocationTypeEntity ->
+                response.add(new ConvocationType(convocationTypeEntity.getId() - 1, convocationTypeEntity.getConvocationTypeName())));
         return response;
     }
 }

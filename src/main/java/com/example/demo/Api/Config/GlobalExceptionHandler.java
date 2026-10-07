@@ -1,6 +1,6 @@
 package com.example.demo.Api.Config;
 
-import com.example.demo.Application.Dtos.CustomResponse;
+import com.example.demo.Api.Dtos.CustomResponse;
 import com.example.demo.Application.Exceptions.NotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

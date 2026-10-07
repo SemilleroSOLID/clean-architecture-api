@@ -1,4 +1,4 @@
-package com.example.demo.Application.Dtos;
+package com.example.demo.Api.Dtos;
 
 import org.springframework.http.HttpStatus;
 

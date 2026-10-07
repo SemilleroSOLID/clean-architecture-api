@@ -10,17 +10,19 @@ public class ConvocationRequirement implements Serializable {
     private String requiredValue;
     private EnumConditionRequirement conditional;
     private String description;
-    private int ConvocationId;
-    private Convocation convocation;
+    private int requirementId;
+    private int convocationId;
 
     public ConvocationRequirement(){}
 
-    public ConvocationRequirement(int id, String name, String requiredValue, EnumConditionRequirement conditional, String description) {
+    public ConvocationRequirement(int id, String name, String requiredValue, EnumConditionRequirement conditional, String description, int requirementId, int convocationId) {
         this.id = id;
         this.name = name;
         this.requiredValue = requiredValue;
         this.conditional = conditional;
         this.description = description;
+        this.requirementId = requirementId;
+        this.convocationId = convocationId;
     }
 
     public int getId() {
@@ -62,21 +64,23 @@ public class ConvocationRequirement implements Serializable {
     public void setDescription(String description) {
         this.description = description;
     }
-    public Convocation getConvocation() {
-        return convocation;
+
+    public int getRequirementId() {
+        return requirementId;
     }
 
-    public void setConvocation(Convocation convocation) {
-        this.convocation = convocation;
+    public void setRequirementId(int requirementId) {
+        this.requirementId = requirementId;
     }
 
     public int getConvocationId() {
-        return ConvocationId;
+        return convocationId;
     }
 
     public void setConvocationId(int convocationId) {
-        ConvocationId = convocationId;
+        this.convocationId = convocationId;
     }
+
     @Override
     public String toString() {
         return "ConvocationRequirement{" +
@@ -85,6 +89,8 @@ public class ConvocationRequirement implements Serializable {
                 ", requiredValue='" + requiredValue + '\'' +
                 ", conditional=" + conditional +
                 ", description='" + description + '\'' +
+                ", requirementId=" + requirementId +
+                ", convocationId=" + convocationId +
                 '}';
     }
 }

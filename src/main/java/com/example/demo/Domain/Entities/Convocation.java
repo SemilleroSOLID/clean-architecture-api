@@ -1,10 +1,11 @@
 package com.example.demo.Domain.Entities;
 
+import com.example.demo.Domain.Enums.EnumConvocationState;
 import com.example.demo.Domain.Enums.EnumConvocationType;
-import com.example.demo.Domain.Enums.EnumStateRequest;
 
 import java.io.Serializable;
-import java.util.Date;
+import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Convocation implements Serializable {
@@ -12,15 +13,15 @@ public class Convocation implements Serializable {
     private String title;
     private String description;
     private EnumConvocationType type;
-    private Date startDate;
-    private Date endDate;
-    private EnumStateRequest state;
-    private List<ConvocationRequirement> convocationRequirements;
-    private List<Request> requestList;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private EnumConvocationState state;
+    private List<ConvocationRequirement> convocationRequirements = new ArrayList<>();
+    private List<Request> requestList = new ArrayList<>();
 
     public Convocation(){}
 
-    public Convocation(int id, String title, String description, EnumConvocationType type, Date startDate, Date endDate, EnumStateRequest state, List<ConvocationRequirement> convocationRequirements, List<Request> requestList) {
+    public Convocation(int id, String title, String description, EnumConvocationType type, LocalDate startDate, LocalDate endDate, EnumConvocationState state, List<ConvocationRequirement> convocationRequirements) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -28,8 +29,7 @@ public class Convocation implements Serializable {
         this.startDate = startDate;
         this.endDate = endDate;
         this.state = state;
-        this.convocationRequirements = convocationRequirements;
-        this.requestList = requestList;
+        this.setConvocationRequirements(convocationRequirements);
     }
 
     public List<Request> getRequestList() {
@@ -37,7 +37,7 @@ public class Convocation implements Serializable {
     }
 
     public void setRequestList(List<Request> requestList) {
-        this.requestList = requestList;
+        this.requestList = requestList == null ? new ArrayList<>() : requestList;
     }
 
     public List<ConvocationRequirement> getConvocationRequirements() {
@@ -45,30 +45,30 @@ public class Convocation implements Serializable {
     }
 
     public void setConvocationRequirements(List<ConvocationRequirement> convocationRequirements) {
-        this.convocationRequirements = convocationRequirements;
+        this.convocationRequirements = convocationRequirements == null ? new ArrayList<>() : convocationRequirements;
     }
 
-    public EnumStateRequest getState() {
+    public EnumConvocationState getState() {
         return state;
     }
 
-    public void setState(EnumStateRequest state) {
+    public void setState(EnumConvocationState state) {
         this.state = state;
     }
 
-    public Date getEndDate() {
+    public LocalDate getEndDate() {
         return endDate;
     }
 
-    public void setEndDate(Date endDate) {
+    public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
     }
 
-    public Date getStartDate() {
+    public LocalDate getStartDate() {
         return startDate;
     }
 
-    public void setStartDate(Date startDate) {
+    public void setStartDate(LocalDate startDate) {
         this.startDate = startDate;
     }
 

@@ -1,15 +1,11 @@
 package com.example.demo.Api.Controllers;
 
 import com.example.demo.Application.Dtos.ConvocationDto;
-import com.example.demo.Application.Dtos.CustomResponse;
+import com.example.demo.Application.Dtos.ConvocationTypeDto;
+import com.example.demo.Api.Dtos.CustomResponse;
+import com.example.demo.Application.IConvocationService;
 import com.example.demo.Application.IRabbitMQSender;
-import com.example.demo.Application.Services.ConvocationService;
-import com.example.demo.Domain.Entities.Convocation;
-import com.example.demo.Domain.Entities.ConvocationType;
-import com.example.demo.Infrastructure.Implementations.Services.RabbitMQSender;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.repository.query.Param;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,7 +15,7 @@ import java.util.List;
 public class ConvocationController {
 
     @Autowired
-    private ConvocationService convocationService;
+    private IConvocationService convocationService;
 
     @Autowired
     private IRabbitMQSender notificationSender;
@@ -44,8 +40,8 @@ public class ConvocationController {
     }
 
     @GetMapping("/getAllConvocationTypes")
-    public CustomResponse<List<ConvocationType>> getAllConvocationTypes() {
-        List<ConvocationType> response = convocationService.getAllConvocationTypes();
+    public CustomResponse<List<ConvocationTypeDto>> getAllConvocationTypes() {
+        List<ConvocationTypeDto> response = convocationService.getAllConvocationTypes();
         return new CustomResponse<>(response, "Lista de tipos de convocatoria");
     }
 

@@ -1,9 +1,9 @@
 package com.example.demo.Domain.Interfaces;
 
-import com.example.demo.Application.Dtos.RequirementDto;
+import com.example.demo.Domain.Entities.Requirement;
 
 import java.util.List;
 
 public interface IRequirementRepository {
-    List<RequirementDto> getAllRequirements();
+    List<Requirement> findAll();
 }
