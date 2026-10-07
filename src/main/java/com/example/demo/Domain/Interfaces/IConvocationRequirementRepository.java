@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface IConvocationRequirementRepository{
     List<ConvocationRequirementEntity> createConvocationRequirements(List<ConvocationRequirementEntity> convocationRequirements);
+    List<ConvocationRequirementEntity> findConvocationRequirements(int convocationId);
 }

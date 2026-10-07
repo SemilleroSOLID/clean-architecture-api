@@ -22,4 +22,9 @@ public class ConvocationRequirementRepository implements IConvocationRequirement
         });
         return response;
     }
+
+    @Override
+    public List<ConvocationRequirementEntity> findConvocationRequirements(int convocationId) {
+        return convocationRequirementCrudRepository.findByConvocationId(convocationId);
+    }
 }

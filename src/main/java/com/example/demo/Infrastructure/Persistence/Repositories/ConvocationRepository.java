@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class ConvocationRepository implements IConvocationRepository {
@@ -38,7 +39,7 @@ public class ConvocationRepository implements IConvocationRepository {
     }
 
     @Override
-    public ConvocationEntity getConvocationById(int convocationId) {
-        return this.convocationCrudRepository.findById(convocationId).get();
+    public Optional<ConvocationEntity> getConvocationById(int convocationId) {
+        return this.convocationCrudRepository.findById(convocationId);
     }
 }

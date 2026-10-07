@@ -2,6 +2,7 @@ package com.example.demo.Application.Services;
 
 import com.example.demo.Application.Dtos.ConvocationDto;
 import com.example.demo.Application.Dtos.ConvocationRequirementDto;
+import com.example.demo.Application.Exceptions.NotFoundException;
 import com.example.demo.Application.IConvocationService;
 import com.example.demo.Application.Mappers.IConvocationMapper;
 import com.example.demo.Domain.Entities.ConvocationType;
@@ -32,19 +33,23 @@ public class ConvocationService implements IConvocationService {
     public List<ConvocationDto> getAllConvocation(){
         List<ConvocationDto> convocationsDto = new ArrayList<>();
         List<ConvocationEntity> convocationEntities = this.convocationRepository.getAllConvocations();
-        convocationEntities.forEach(convocationEntity -> {
-            ConvocationDto convocationDto = this.convocationMapper.convocationEntityToConvocationDto(convocationEntity);
-            convocationDto.setConvocationRequirements(new ArrayList<>());
-            convocationsDto.add(convocationDto);
-        });
+        convocationEntities.forEach(convocationEntity -> convocationsDto.add(this.toConvocationDtoWithRequirements(convocationEntity)));
         return convocationsDto;
     }
 
     @Override
     public ConvocationDto getConvocationById(int convocationId) {
-        ConvocationEntity convocationEntity = this.convocationRepository.getConvocationById(convocationId);
+        ConvocationEntity convocationEntity = this.convocationRepository.getConvocationById(convocationId)
+                .orElseThrow(() -> new NotFoundException("No existe una convocatoria con id " + convocationId));
+        return this.toConvocationDtoWithRequirements(convocationEntity);
+    }
+
+    private ConvocationDto toConvocationDtoWithRequirements(ConvocationEntity convocationEntity) {
         ConvocationDto convocationDto = this.convocationMapper.convocationEntityToConvocationDto(convocationEntity);
-        convocationDto.setConvocationRequirements(new ArrayList<>());
+        List<ConvocationRequirementEntity> convocationRequirementEntities = this.convocationRequirementRepository
+                .findConvocationRequirements(convocationEntity.getId());
+        convocationDto.setConvocationRequirements(this.convocationMapper
+                .listConvocationRequirementEntityToListConvocationRequirementDto(convocationRequirementEntities));
         return convocationDto;
     }
 

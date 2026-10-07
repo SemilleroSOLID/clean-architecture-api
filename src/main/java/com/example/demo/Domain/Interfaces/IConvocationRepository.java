@@ -6,10 +6,11 @@ import com.example.demo.Domain.Entities.ConvocationRequirement;
 import com.example.demo.Infrastructure.Persistence.Entities.ConvocationEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface IConvocationRepository {
    List<Convocation> getAllConvocation();
    ConvocationEntity createConvocation(ConvocationEntity convocation);
    List<ConvocationEntity> getAllConvocations();
-   ConvocationEntity getConvocationById(int convocationId);
+   Optional<ConvocationEntity> getConvocationById(int convocationId);
 }
