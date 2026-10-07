@@ -6,7 +6,9 @@ GO
 
 CREATE TABLE Requirement (
     requirementId INT IDENTITY(1,1) PRIMARY KEY,
-    requirementName NVARCHAR(255) NOT NULL
+    requirementName NVARCHAR(255) NOT NULL,
+    -- 1 when the required value is a grade (number between 0 and 5.0)
+    isGrade BIT NOT NULL DEFAULT 0
 );
 GO
 
@@ -17,11 +19,11 @@ CREATE TABLE ConvocationType (
 GO
 
 -- Insert data into Requirement table
-INSERT INTO Requirement (requirementName) VALUES
-    (N'Promedio académico superior a 4.0'),
-    (N'No tener sanciones disciplinarias'),
-    (N'Haber cursado mínimo 2 semestres'),
-    (N'Disponibilidad de 20 horas semanales');
+INSERT INTO Requirement (requirementName, isGrade) VALUES
+    (N'Promedio académico superior a 4.0', 1),
+    (N'No tener sanciones disciplinarias', 0),
+    (N'Haber cursado mínimo 2 semestres', 0),
+    (N'Disponibilidad de 20 horas semanales', 0);
 GO
 
 -- Insert data into ConvocationType table

@@ -5,12 +5,22 @@ import java.io.Serializable;
 public class Requirement implements Serializable {
     private int id;
     private String name;
+    private boolean grade;
 
     public Requirement(){}
 
-    public Requirement(int id, String name) {
+    public Requirement(int id, String name, boolean grade) {
         this.id = id;
         this.name = name;
+        this.grade = grade;
+    }
+
+    public boolean isGrade() {
+        return grade;
+    }
+
+    public void setGrade(boolean grade) {
+        this.grade = grade;
     }
 
     public int getId() {

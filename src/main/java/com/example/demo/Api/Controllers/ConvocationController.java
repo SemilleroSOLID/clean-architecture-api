@@ -5,6 +5,7 @@ import com.example.demo.Application.Dtos.ConvocationTypeDto;
 import com.example.demo.Api.Dtos.CustomResponse;
 import com.example.demo.Application.IConvocationService;
 import com.example.demo.Application.IRabbitMQSender;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,7 +47,7 @@ public class ConvocationController {
     }
 
     @PostMapping("/createConvocation")
-    public CustomResponse<ConvocationDto> createConvocation(@RequestBody ConvocationDto convocation) {
+    public CustomResponse<ConvocationDto> createConvocation(@Valid @RequestBody ConvocationDto convocation) {
         ConvocationDto createdConvocation = this.convocationService.createConvocation(convocation);
         return new CustomResponse<>(createdConvocation, "New convocation");
     }

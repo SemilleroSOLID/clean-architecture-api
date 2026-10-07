@@ -15,6 +15,17 @@ public class RequirementEntity {
     @Column(name = "requirementName", nullable = false, length = 255)
     private String requirementName;
 
+    @Column(name = "isGrade", nullable = false)
+    private Boolean grade;
+
+    public Boolean getGrade() {
+        return grade;
+    }
+
+    public void setGrade(Boolean grade) {
+        this.grade = grade;
+    }
+
     public Integer getId() {
         return id;
     }

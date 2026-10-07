@@ -2,11 +2,14 @@ package com.example.demo.Domain.Entities;
 
 import com.example.demo.Domain.Enums.EnumConvocationState;
 import com.example.demo.Domain.Enums.EnumConvocationType;
+import com.example.demo.Domain.Exceptions.DomainValidationException;
 
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Convocation implements Serializable {
     private int id;
@@ -30,6 +33,26 @@ public class Convocation implements Serializable {
         this.endDate = endDate;
         this.state = state;
         this.setConvocationRequirements(convocationRequirements);
+    }
+
+    /**
+     * CU-001 rules: both dates after today, the end date at least one day after the start date,
+     * and every requirement valid against the requirement catalog.
+     */
+    public void validate(LocalDate today, Map<Integer, Requirement> requirementCatalog) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        if (startDate != null && !startDate.isAfter(today)) {
+            errors.put("startDate", "La fecha de inicio debe ser posterior a la fecha actual");
+        }
+        if (endDate != null && startDate != null && endDate.isBefore(startDate.plusDays(1))) {
+            errors.put("endDate", "La fecha de fin debe ser al menos un día después de la fecha de inicio");
+        }
+        for (int index = 0; index < convocationRequirements.size(); index++) {
+            convocationRequirements.get(index).validate(requirementCatalog, "convocationRequirements[" + index + "]", errors);
+        }
+        if (!errors.isEmpty()) {
+            throw new DomainValidationException(errors);
+        }
     }
 
     public List<Request> getRequestList() {

@@ -20,7 +20,7 @@ public class RequirementService implements IRequirementService {
     @Override
     public List<RequirementDto> getAllRequirements() {
         return this.requirementRepository.findAll().stream()
-                .map(requirement -> new RequirementDto(requirement.getId(), requirement.getName()))
+                .map(requirement -> new RequirementDto(requirement.getId(), requirement.getName(), requirement.isGrade()))
                 .toList();
     }
 

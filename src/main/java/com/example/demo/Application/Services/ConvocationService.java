@@ -7,15 +7,22 @@ import com.example.demo.Application.IConvocationService;
 import com.example.demo.Application.Mappers.IConvocationMapper;
 import com.example.demo.Domain.Entities.Convocation;
 import com.example.demo.Domain.Entities.ConvocationRequirement;
+import com.example.demo.Domain.Entities.Requirement;
 import com.example.demo.Domain.Enums.EnumConvocationState;
 import com.example.demo.Domain.Interfaces.IConvocationRepository;
 import com.example.demo.Domain.Interfaces.IConvocationRequirementRepository;
 import com.example.demo.Domain.Interfaces.IConvocationTypeRepository;
+import com.example.demo.Domain.Interfaces.IRequirementRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class ConvocationService implements IConvocationService {
@@ -26,7 +33,11 @@ public class ConvocationService implements IConvocationService {
     @Autowired
     private IConvocationRequirementRepository convocationRequirementRepository;
     @Autowired
+    private IRequirementRepository requirementRepository;
+    @Autowired
     private IConvocationMapper convocationMapper;
+    @Autowired
+    private Clock clock;
 
     @Override
     public List<ConvocationDto> getAllConvocation(){
@@ -54,6 +65,7 @@ public class ConvocationService implements IConvocationService {
     @Transactional
     public ConvocationDto createConvocation(ConvocationDto convocationDto) {
         Convocation convocation = this.convocationMapper.toDomain(convocationDto);
+        convocation.validate(LocalDate.now(this.clock), this.getRequirementCatalog());
         convocation.setState(EnumConvocationState.OPEN);
 
         Convocation createdConvocation = this.convocationRepository.save(convocation);
@@ -63,6 +75,11 @@ public class ConvocationService implements IConvocationService {
         createdConvocation.setConvocationRequirements(this.convocationRequirementRepository.saveAll(convocationRequirements));
 
         return this.convocationMapper.toDto(createdConvocation);
+    }
+
+    private Map<Integer, Requirement> getRequirementCatalog() {
+        return this.requirementRepository.findAll().stream()
+                .collect(Collectors.toMap(Requirement::getId, Function.identity()));
     }
 
     private Convocation withRequirements(Convocation convocation) {

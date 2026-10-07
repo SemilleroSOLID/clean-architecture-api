@@ -1,5 +1,8 @@
 package com.example.demo.Application.Dtos;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import com.example.demo.Domain.Enums.EnumConvocationState;
 import com.example.demo.Domain.Enums.EnumConvocationType;
@@ -11,12 +14,17 @@ import java.util.List;
 
 public class ConvocationDto implements Serializable {
     private int id;
+    @NotBlank(message = "El título es obligatorio")
     private String title;
     private String description;
+    @NotNull(message = "El tipo de convocatoria es obligatorio")
     private EnumConvocationType type;
+    @NotNull(message = "La fecha de inicio es obligatoria")
     private Date startDate;
+    @NotNull(message = "La fecha de fin es obligatoria")
     private Date endDate;
     private EnumConvocationState state;
+    @Valid
     private List<ConvocationRequirementDto> convocationRequirements;
     public ConvocationDto(){}
 

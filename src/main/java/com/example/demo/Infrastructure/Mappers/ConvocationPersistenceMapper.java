@@ -10,6 +10,7 @@ import com.example.demo.Infrastructure.Persistence.Entities.ConvocationRequireme
 import org.springframework.stereotype.Component;
 
 import java.sql.Date;
+import java.util.Objects;
 
 @Component
 public class ConvocationPersistenceMapper {
@@ -30,7 +31,7 @@ public class ConvocationPersistenceMapper {
         ConvocationEntity convocationEntity = new ConvocationEntity();
         if (convocation.getId() != 0) convocationEntity.setId(convocation.getId());
         convocationEntity.setTitle(convocation.getTitle());
-        convocationEntity.setConvocationDescription(convocation.getDescription());
+        convocationEntity.setConvocationDescription(Objects.requireNonNullElse(convocation.getDescription(), ""));
         convocationEntity.setConvocationTypeId(convocation.getType().getValue());
         convocationEntity.setStartDate(Date.valueOf(convocation.getStartDate()));
         convocationEntity.setEndDate(Date.valueOf(convocation.getEndDate()));
@@ -55,7 +56,7 @@ public class ConvocationPersistenceMapper {
         convocationRequirementEntity.setName(convocationRequirement.getName());
         convocationRequirementEntity.setRequiredValue(convocationRequirement.getRequiredValue());
         convocationRequirementEntity.setConditionalId(convocationRequirement.getConditional().getValue());
-        convocationRequirementEntity.setRequirementDescription(convocationRequirement.getDescription());
+        convocationRequirementEntity.setRequirementDescription(Objects.requireNonNullElse(convocationRequirement.getDescription(), ""));
         convocationRequirementEntity.setRequirementId(convocationRequirement.getRequirementId());
         convocationRequirementEntity.setConvocationId(convocationRequirement.getConvocationId());
         return convocationRequirementEntity;

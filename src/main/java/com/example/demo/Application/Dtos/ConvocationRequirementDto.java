@@ -1,15 +1,22 @@
 package com.example.demo.Application.Dtos;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import com.example.demo.Domain.Enums.EnumConditionRequirement;
 
 import java.io.Serializable;
 
 public class ConvocationRequirementDto implements Serializable {
     private int id;
+    @NotBlank(message = "El nombre del requisito es obligatorio")
     private String name;
+    @NotBlank(message = "El valor requerido es obligatorio")
     private String requiredValue;
+    @NotNull(message = "La condición del requisito es obligatoria")
     private EnumConditionRequirement conditional;
     private String description;
+    @Positive(message = "El tipo de requisito es obligatorio")
     private int requirementId;
     private int convocationId;
 

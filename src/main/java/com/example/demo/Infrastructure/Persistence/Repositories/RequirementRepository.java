@@ -18,7 +18,8 @@ public class RequirementRepository implements IRequirementRepository {
     public List<Requirement> findAll() {
         List<Requirement> requirements = new ArrayList<>();
         this.requirementCrudRepository.findAll().forEach(requirementEntity ->
-                requirements.add(new Requirement(requirementEntity.getId(), requirementEntity.getRequirementName())));
+                requirements.add(new Requirement(requirementEntity.getId(), requirementEntity.getRequirementName(),
+                        Boolean.TRUE.equals(requirementEntity.getGrade()))));
         return requirements;
     }
 }

@@ -3,8 +3,11 @@ package com.example.demo.Domain.Entities;
 import com.example.demo.Domain.Enums.EnumConditionRequirement;
 
 import java.io.Serializable;
+import java.util.Map;
 
 public class ConvocationRequirement implements Serializable {
+    private static final double MAX_GRADE = 5.0;
+
     private int id;
     private String name;
     private String requiredValue;
@@ -23,6 +26,36 @@ public class ConvocationRequirement implements Serializable {
         this.description = description;
         this.requirementId = requirementId;
         this.convocationId = convocationId;
+    }
+
+    /**
+     * The requirement type must exist; a numeric value must be greater than 0,
+     * and a grade must be a number between 0 (exclusive) and 5.0.
+     */
+    public void validate(Map<Integer, Requirement> requirementCatalog, String field, Map<String, String> errors) {
+        Requirement requirement = requirementCatalog.get(requirementId);
+        if (requirement == null) {
+            errors.put(field + ".requirementId", "El tipo de requisito " + requirementId + " no existe");
+            return;
+        }
+        Double numericValue = parseNumber(requiredValue);
+        if (requirement.isGrade() && numericValue == null) {
+            errors.put(field + ".requiredValue", "El valor de \"" + requirement.getName() + "\" debe ser una nota numérica");
+        } else if (numericValue != null && numericValue <= 0) {
+            errors.put(field + ".requiredValue", "El valor de \"" + requirement.getName() + "\" debe ser mayor a 0");
+        } else if (requirement.isGrade() && numericValue > MAX_GRADE) {
+            errors.put(field + ".requiredValue", "El valor de \"" + requirement.getName() + "\" no puede ser mayor a 5.0");
+        }
+    }
+
+    private static Double parseNumber(String value) {
+        if (value == null) return null;
+        try {
+            double number = Double.parseDouble(value.trim().replace(',', '.'));
+            return Double.isFinite(number) ? number : null;
+        } catch (NumberFormatException exception) {
+            return null;
+        }
     }
 
     public int getId() {
