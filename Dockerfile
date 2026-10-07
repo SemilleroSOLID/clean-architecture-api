@@ -1,4 +1,4 @@
-FROM openjdk:18-bullseye
+FROM eclipse-temurin:17-jdk-jammy
 
 WORKDIR /app
 

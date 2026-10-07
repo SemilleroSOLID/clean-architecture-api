@@ -9,6 +9,7 @@ import java.util.List;
 public class RequirementEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "requirementId")
     private Integer id;
 
     @Column(name = "requirementName", nullable = false, length = 255)

@@ -3,10 +3,11 @@ package com.example.demo.Infrastructure.Persistence.Entities;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "ConvocationTypes", schema = "dbo")
+@Table(name = "ConvocationType", schema = "dbo")
 public class ConvocationTypeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "convocationTypeId")
     private Integer id;
 
     @Column(name = "convocationTypeName", nullable = false, length = 255)
