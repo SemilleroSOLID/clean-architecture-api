@@ -17,9 +17,8 @@ public class ConvocationTypeRepository implements IConvocationTypeRepository {
     @Override
     public List<ConvocationType> findAll() {
         List<ConvocationType> response = new ArrayList<>();
-        // The -1 keeps the ids the front already uses; the type alignment is pending in issue #5.
         this.convocationTypeCrudRepository.findAll().forEach(convocationTypeEntity ->
-                response.add(new ConvocationType(convocationTypeEntity.getId() - 1, convocationTypeEntity.getConvocationTypeName())));
+                response.add(new ConvocationType(convocationTypeEntity.getId(), convocationTypeEntity.getConvocationTypeName())));
         return response;
     }
 }

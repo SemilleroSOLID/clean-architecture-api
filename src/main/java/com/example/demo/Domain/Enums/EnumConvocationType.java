@@ -23,6 +23,6 @@ public enum EnumConvocationType {
                 return state;
             }
         }
-        throw new IllegalArgumentException("Invalid ConvocationState value: " + value);
+        throw new IllegalArgumentException("Invalid ConvocationType value: " + value);
     }
 }

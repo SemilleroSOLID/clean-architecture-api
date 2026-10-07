@@ -25,9 +25,9 @@ INSERT INTO Requirement (requirementName) VALUES
 GO
 
 -- Insert data into ConvocationType table
+-- The ids must match EnumConvocationType: MONITORING=1, GRANT=2, RESIDENCE=3
 INSERT INTO ConvocationType (convocationTypeName) VALUES
     (N'Monitoria Académica'),
-    (N'Residencia Estudiantil'),
     (N'Beca de Investigación'),
-    (N'Auxiliar de Laboratorio');
+    (N'Residencia Estudiantil');
 GO
