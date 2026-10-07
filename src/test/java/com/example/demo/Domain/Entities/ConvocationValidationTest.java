@@ -84,6 +84,21 @@ class ConvocationValidationTest {
     }
 
     @Test
+    void editingKeepsAStartDateThatAlreadyPassed() {
+        LocalDate originalStart = TODAY.minusDays(10);
+        assertDoesNotThrow(() -> convocation(originalStart, TODAY.plusDays(5), requirement(1, "4.0"))
+                .validateChanges(originalStart, TODAY, CATALOG));
+    }
+
+    @Test
+    void editingToANewPastStartDateIsRejected() {
+        Convocation edited = convocation(TODAY.minusDays(2), TODAY.plusDays(5));
+        Map<String, String> errors = assertThrows(DomainValidationException.class,
+                () -> edited.validateChanges(TODAY.minusDays(10), TODAY, CATALOG)).getErrors();
+        assertTrue(errors.containsKey("startDate"));
+    }
+
+    @Test
     void allErrorsAreReportedTogether() {
         Map<String, String> errors = errorsOf(convocation(TODAY, TODAY, requirement(1, "6")));
         assertEquals(3, errors.size());

@@ -52,4 +52,11 @@ public class ConvocationController {
         return new CustomResponse<>(createdConvocation, "New convocation");
     }
 
+    @PutMapping("/updateConvocation/{convocationId}")
+    public CustomResponse<ConvocationDto> updateConvocation(@PathVariable("convocationId") Integer convocationId,
+                                                            @Valid @RequestBody ConvocationDto convocation) {
+        ConvocationDto updatedConvocation = this.convocationService.updateConvocation(convocationId, convocation);
+        return new CustomResponse<>(updatedConvocation, "Convocatoria actualizada");
+    }
+
 }

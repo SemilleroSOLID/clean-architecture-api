@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -34,5 +35,10 @@ public class ConvocationRequirementRepository implements IConvocationRequirement
         return this.convocationRequirementCrudRepository.findByConvocationId(convocationId).stream()
                 .map(this.convocationPersistenceMapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public void deleteByIds(Collection<Integer> convocationRequirementIds) {
+        this.convocationRequirementCrudRepository.deleteAllById(convocationRequirementIds);
     }
 }

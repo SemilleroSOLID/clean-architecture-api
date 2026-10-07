@@ -40,8 +40,21 @@ public class Convocation implements Serializable {
      * and every requirement valid against the requirement catalog.
      */
     public void validate(LocalDate today, Map<Integer, Requirement> requirementCatalog) {
+        validate(today, requirementCatalog, null);
+    }
+
+    /**
+     * Same rules when editing, except that a start date that did not change is accepted even if it
+     * already passed; otherwise a convocation that already started could not be edited at all.
+     */
+    public void validateChanges(LocalDate originalStartDate, LocalDate today, Map<Integer, Requirement> requirementCatalog) {
+        validate(today, requirementCatalog, originalStartDate);
+    }
+
+    private void validate(LocalDate today, Map<Integer, Requirement> requirementCatalog, LocalDate originalStartDate) {
         Map<String, String> errors = new LinkedHashMap<>();
-        if (startDate != null && !startDate.isAfter(today)) {
+        boolean startDateChanged = originalStartDate == null || !originalStartDate.equals(startDate);
+        if (startDate != null && startDateChanged && !startDate.isAfter(today)) {
             errors.put("startDate", "La fecha de inicio debe ser posterior a la fecha actual");
         }
         if (endDate != null && startDate != null && endDate.isBefore(startDate.plusDays(1))) {
