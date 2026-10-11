@@ -12,6 +12,17 @@ CREATE TABLE Requirement (
 );
 GO
 
+CREATE TABLE Student (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nameStudent NVARCHAR(255) NOT NULL,
+    email NVARCHAR(255) NOT NULL,
+    program NVARCHAR(255) NOT NULL,
+    -- Grade point average, between 0 and 5.0
+    average DECIMAL(3,2) NOT NULL,
+    stratum INT NOT NULL
+);
+GO
+
 CREATE TABLE ConvocationType (
     convocationTypeId INT IDENTITY(1,1) PRIMARY KEY,
     convocationTypeName NVARCHAR(255) NOT NULL
@@ -24,6 +35,15 @@ INSERT INTO Requirement (requirementName, isGrade) VALUES
     (N'No tener sanciones disciplinarias', 0),
     (N'Haber cursado mínimo 2 semestres', 0),
     (N'Disponibilidad de 20 horas semanales', 0);
+GO
+
+-- Insert example students: different programs, averages and strata to test requirements that are met and not met
+INSERT INTO Student (nameStudent, email, program, average, stratum) VALUES
+    (N'Laura Gómez Ríos', N'laura.gomez@ucaldas.test', N'Ingeniería de Sistemas', 4.6, 2),
+    (N'Andrés Felipe Torres', N'andres.torres@ucaldas.test', N'Ingeniería de Sistemas', 3.8, 3),
+    (N'Valentina Herrera Castaño', N'valentina.herrera@ucaldas.test', N'Biología', 4.2, 1),
+    (N'Santiago Ramírez López', N'santiago.ramirez@ucaldas.test', N'Derecho', 3.2, 4),
+    (N'Camila Ospina Duque', N'camila.ospina@ucaldas.test', N'Medicina', 4.9, 2);
 GO
 
 -- Insert data into ConvocationType table

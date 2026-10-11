@@ -17,8 +17,10 @@ public class StudentEntity {
      @Column(name = "program", nullable = false, length = 255)
     private String program;
 
+     @Column(name = "email", nullable = false, length = 255)
+    private String email;
      @Column(name = "average", nullable = false)
-    private Integer average;
+    private Double average;
 
      @Column(name = "stratum", nullable = false)
     private Integer stratum;
@@ -47,11 +49,19 @@ public class StudentEntity {
         this.program = program;
     }
 
-    public Integer getAverage() {
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public Double getAverage() {
         return average;
     }
 
-    public void setAverage(Integer average) {
+    public void setAverage(Double average) {
         this.average = average;
     }
 

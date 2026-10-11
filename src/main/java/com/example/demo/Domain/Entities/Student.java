@@ -6,6 +6,7 @@ import java.util.List;
 public class Student implements Serializable {
     private int id;
     private String name;
+    private String email;
     private String program;
     private double average;
     private int stratum;
@@ -13,9 +14,10 @@ public class Student implements Serializable {
 
     public Student(){}
 
-    public Student(int id, String name, String program, double average, int stratum, List<Request> studentRequestList) {
+    public Student(int id, String name, String email, String program, double average, int stratum, List<Request> studentRequestList) {
         this.id = id;
         this.name = name;
+        this.email = email;
         this.program = program;
         this.average = average;
         this.stratum = stratum;
@@ -36,6 +38,14 @@ public class Student implements Serializable {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getProgram() {
@@ -75,6 +85,7 @@ public class Student implements Serializable {
         return "Student{" +
                 "id=" + id +
                 ", name='" + name + '\'' +
+                ", email='" + email + '\'' +
                 ", program='" + program + '\'' +
                 ", average=" + average +
                 ", stratum=" + stratum +
