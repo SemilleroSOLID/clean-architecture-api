@@ -59,4 +59,10 @@ public class ConvocationController {
         return new CustomResponse<>(updatedConvocation, "Convocatoria actualizada");
     }
 
+    @DeleteMapping("/deleteConvocation/{convocationId}")
+    public CustomResponse<Object> deleteConvocation(@PathVariable("convocationId") Integer convocationId) {
+        this.convocationService.deleteConvocation(convocationId);
+        return new CustomResponse<>(null, "Convocatoria eliminada");
+    }
+
 }

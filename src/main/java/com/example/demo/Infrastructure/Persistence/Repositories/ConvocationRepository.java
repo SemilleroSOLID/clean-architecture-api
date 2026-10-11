@@ -37,4 +37,9 @@ public class ConvocationRepository implements IConvocationRepository {
     public Optional<Convocation> findById(int convocationId) {
         return this.convocationCrudRepository.findById(convocationId).map(this.convocationPersistenceMapper::toDomain);
     }
+
+    @Override
+    public void deleteById(int convocationId) {
+        this.convocationCrudRepository.deleteById(convocationId);
+    }
 }

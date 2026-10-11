@@ -9,4 +9,5 @@ public interface IConvocationRepository {
    Convocation save(Convocation convocation);
    List<Convocation> findAll();
    Optional<Convocation> findById(int convocationId);
+   void deleteById(int convocationId);
 }

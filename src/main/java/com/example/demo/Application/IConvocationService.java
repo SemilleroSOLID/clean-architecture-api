@@ -11,4 +11,5 @@ public interface IConvocationService {
    List<ConvocationTypeDto> getAllConvocationTypes();
    ConvocationDto createConvocation(ConvocationDto convocation);
    ConvocationDto updateConvocation(int convocationId, ConvocationDto convocation);
+   void deleteConvocation(int convocationId);
 }

@@ -2,6 +2,7 @@ package com.example.demo.Application.Services;
 
 import com.example.demo.Application.Dtos.ConvocationDto;
 import com.example.demo.Application.Dtos.ConvocationTypeDto;
+import com.example.demo.Application.Exceptions.ConflictException;
 import com.example.demo.Application.Exceptions.NotFoundException;
 import com.example.demo.Application.IConvocationService;
 import com.example.demo.Application.Mappers.IConvocationMapper;
@@ -13,6 +14,7 @@ import com.example.demo.Domain.Exceptions.DomainValidationException;
 import com.example.demo.Domain.Interfaces.IConvocationRepository;
 import com.example.demo.Domain.Interfaces.IConvocationRequirementRepository;
 import com.example.demo.Domain.Interfaces.IConvocationTypeRepository;
+import com.example.demo.Domain.Interfaces.IRequestRepository;
 import com.example.demo.Domain.Interfaces.IRequirementRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +39,8 @@ public class ConvocationService implements IConvocationService {
     private IConvocationRequirementRepository convocationRequirementRepository;
     @Autowired
     private IRequirementRepository requirementRepository;
+    @Autowired
+    private IRequestRepository requestRepository;
     @Autowired
     private IConvocationMapper convocationMapper;
     @Autowired
@@ -120,6 +124,22 @@ public class ConvocationService implements IConvocationService {
         updatedConvocation.setConvocationRequirements(this.convocationRequirementRepository.saveAll(convocationRequirements));
 
         return this.convocationMapper.toDto(updatedConvocation);
+    }
+
+    @Override
+    @Transactional
+    public void deleteConvocation(int convocationId) {
+        this.convocationRepository.findById(convocationId)
+                .orElseThrow(() -> new NotFoundException("No existe una convocatoria con id " + convocationId));
+        // A convocation with requests is not deleted, so no application is lost; it will be cancelled instead (issue #30).
+        if (this.requestRepository.existsByConvocationId(convocationId)) {
+            throw new ConflictException("La convocatoria tiene solicitudes de estudiantes y no se puede eliminar");
+        }
+        List<Integer> requirementIds = this.convocationRequirementRepository.findConvocationRequirements(convocationId).stream()
+                .map(ConvocationRequirement::getId)
+                .toList();
+        this.convocationRequirementRepository.deleteByIds(requirementIds);
+        this.convocationRepository.deleteById(convocationId);
     }
 
     private Map<Integer, Requirement> getRequirementCatalog() {
