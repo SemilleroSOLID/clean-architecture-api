@@ -25,6 +25,7 @@ public class ConvocationMapper implements IConvocationMapper {
         convocationDto.setStartDate(toDate(convocation.getStartDate()));
         convocationDto.setEndDate(toDate(convocation.getEndDate()));
         convocationDto.setState(convocation.getState());
+        convocationDto.setCancellationReason(convocation.getCancellationReason());
         convocationDto.setConvocationRequirements(convocation.getConvocationRequirements().stream().map(this::toDto).toList());
         return convocationDto;
     }

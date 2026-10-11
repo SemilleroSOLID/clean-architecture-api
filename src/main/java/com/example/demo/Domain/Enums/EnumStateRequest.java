@@ -1,10 +1,16 @@
 package com.example.demo.Domain.Enums;
 
+import java.util.Set;
+
 public enum EnumStateRequest {
     PENDING(1),
     ACTIVE(2),
     REJECT(3),
     ACCEPT(4);
+
+    /** Requests that still wait for the administrator's decision. */
+    public static final Set<EnumStateRequest> UNDECIDED = Set.of(PENDING, ACTIVE);
+
     private int value;
     EnumStateRequest(int value){
         this.value = value;

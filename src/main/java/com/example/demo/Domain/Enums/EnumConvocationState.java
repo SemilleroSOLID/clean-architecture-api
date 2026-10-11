@@ -2,7 +2,9 @@ package com.example.demo.Domain.Enums;
 
 public enum EnumConvocationState {
     OPEN(1),
-    CLOSED(2);
+    CLOSED(2),
+    FINISHED(3),
+    CANCELLED(4);
 
     private final int value;
 

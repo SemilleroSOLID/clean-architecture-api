@@ -1,7 +1,9 @@
 package com.example.demo.Api.Controllers;
 
+import com.example.demo.Application.Dtos.CancelConvocationDto;
 import com.example.demo.Application.Dtos.ConvocationDto;
 import com.example.demo.Application.Dtos.ConvocationTypeDto;
+import com.example.demo.Application.Dtos.ReopenConvocationDto;
 import com.example.demo.Api.Dtos.CustomResponse;
 import com.example.demo.Application.IConvocationService;
 import com.example.demo.Application.IRabbitMQSender;
@@ -63,6 +65,28 @@ public class ConvocationController {
     public CustomResponse<Object> deleteConvocation(@PathVariable("convocationId") Integer convocationId) {
         this.convocationService.deleteConvocation(convocationId);
         return new CustomResponse<>(null, "Convocatoria eliminada");
+    }
+
+    @PutMapping("/closeConvocation/{convocationId}")
+    public CustomResponse<ConvocationDto> closeConvocation(@PathVariable("convocationId") Integer convocationId) {
+        return new CustomResponse<>(this.convocationService.closeConvocation(convocationId), "Convocatoria cerrada");
+    }
+
+    @PutMapping("/reopenConvocation/{convocationId}")
+    public CustomResponse<ConvocationDto> reopenConvocation(@PathVariable("convocationId") Integer convocationId,
+                                                            @Valid @RequestBody ReopenConvocationDto reopen) {
+        return new CustomResponse<>(this.convocationService.reopenConvocation(convocationId, reopen.getEndDate()), "Convocatoria reabierta");
+    }
+
+    @PutMapping("/finishConvocation/{convocationId}")
+    public CustomResponse<ConvocationDto> finishConvocation(@PathVariable("convocationId") Integer convocationId) {
+        return new CustomResponse<>(this.convocationService.finishConvocation(convocationId), "Convocatoria finalizada");
+    }
+
+    @PutMapping("/cancelConvocation/{convocationId}")
+    public CustomResponse<ConvocationDto> cancelConvocation(@PathVariable("convocationId") Integer convocationId,
+                                                            @Valid @RequestBody CancelConvocationDto cancel) {
+        return new CustomResponse<>(this.convocationService.cancelConvocation(convocationId, cancel.getReason()), "Convocatoria cancelada");
     }
 
 }

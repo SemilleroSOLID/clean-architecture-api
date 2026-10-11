@@ -3,6 +3,8 @@ package com.example.demo.Domain.Entities;
 import com.example.demo.Domain.Enums.EnumConvocationState;
 import com.example.demo.Domain.Enums.EnumConvocationType;
 import com.example.demo.Domain.Exceptions.DomainValidationException;
+import com.example.demo.Domain.States.ConvocationState;
+import com.example.demo.Domain.States.ConvocationStates;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -19,6 +21,7 @@ public class Convocation implements Serializable {
     private LocalDate startDate;
     private LocalDate endDate;
     private EnumConvocationState state;
+    private String cancellationReason;
     private List<ConvocationRequirement> convocationRequirements = new ArrayList<>();
     private List<Request> requestList = new ArrayList<>();
 
@@ -66,6 +69,74 @@ public class Convocation implements Serializable {
         if (!errors.isEmpty()) {
             throw new DomainValidationException(errors);
         }
+    }
+
+    /**
+     * Requirements cannot change their rules once students applied, because it would change the conditions for them.
+     * Only the type, required value and condition count as rules; names and descriptions can still be edited.
+     */
+    public void ensureRequirementRulesUnchanged(List<ConvocationRequirement> currentRequirements) {
+        if (!requirementRules(convocationRequirements).equals(requirementRules(currentRequirements))) {
+            throw new DomainValidationException(Map.of("convocationRequirements",
+                    "No se pueden cambiar los requisitos de una convocatoria que ya tiene solicitudes"));
+        }
+    }
+
+    private static List<String> requirementRules(List<ConvocationRequirement> requirements) {
+        return requirements.stream()
+                .map(requirement -> requirement.getRequirementId() + "|" + requirement.getConditional() + "|"
+                        + (requirement.getRequiredValue() == null ? "" : requirement.getRequiredValue().trim()))
+                .sorted()
+                .toList();
+    }
+
+    // The behaviour that depends on the state is delegated to the state object (State pattern, issue #31).
+    private ConvocationState currentState() {
+        return ConvocationStates.of(state);
+    }
+
+    public void applyDateRules(LocalDate today) {
+        currentState().applyDateRules(this, today);
+    }
+
+    public void ensureCanBeEdited() {
+        currentState().ensureCanBeEdited(this);
+    }
+
+    public void ensureCanBeDeleted() {
+        currentState().ensureCanBeDeleted(this);
+    }
+
+    public void close() {
+        currentState().close(this);
+    }
+
+    public void reopen(LocalDate newEndDate, LocalDate today) {
+        currentState().reopen(this, newEndDate, today);
+    }
+
+    public void finish(boolean hasUndecidedRequests) {
+        currentState().finish(this, hasUndecidedRequests);
+    }
+
+    public void cancel(String reason) {
+        currentState().cancel(this, reason);
+    }
+
+    public boolean canReceiveRequests(LocalDate today) {
+        return currentState().canReceiveRequests(this, today);
+    }
+
+    public boolean canDecideRequests() {
+        return currentState().canDecideRequests();
+    }
+
+    public String getCancellationReason() {
+        return cancellationReason;
+    }
+
+    public void setCancellationReason(String cancellationReason) {
+        this.cancellationReason = cancellationReason;
     }
 
     public List<Request> getRequestList() {

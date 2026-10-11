@@ -24,6 +24,7 @@ public class ConvocationPersistenceMapper {
         convocation.setStartDate(convocationEntity.getStartDate().toLocalDate());
         convocation.setEndDate(convocationEntity.getEndDate().toLocalDate());
         convocation.setState(EnumConvocationState.fromValue(convocationEntity.getStateConvocationId()));
+        convocation.setCancellationReason(convocationEntity.getCancellationReason());
         return convocation;
     }
 
@@ -36,6 +37,7 @@ public class ConvocationPersistenceMapper {
         convocationEntity.setStartDate(Date.valueOf(convocation.getStartDate()));
         convocationEntity.setEndDate(Date.valueOf(convocation.getEndDate()));
         convocationEntity.setStateConvocationId(convocation.getState().getValue());
+        convocationEntity.setCancellationReason(convocation.getCancellationReason());
         return convocationEntity;
     }
 

@@ -24,6 +24,7 @@ public class ConvocationDto implements Serializable {
     @NotNull(message = "La fecha de fin es obligatoria")
     private Date endDate;
     private EnumConvocationState state;
+    private String cancellationReason;
     @Valid
     private List<ConvocationRequirementDto> convocationRequirements;
     public ConvocationDto(){}
@@ -74,6 +75,14 @@ public class ConvocationDto implements Serializable {
 
     public void setEndDate(Date endDate) {
         this.endDate = endDate;
+    }
+
+    public String getCancellationReason() {
+        return cancellationReason;
+    }
+
+    public void setCancellationReason(String cancellationReason) {
+        this.cancellationReason = cancellationReason;
     }
 
     public EnumConvocationState getState() {

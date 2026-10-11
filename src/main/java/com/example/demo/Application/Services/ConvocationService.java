@@ -10,6 +10,7 @@ import com.example.demo.Domain.Entities.Convocation;
 import com.example.demo.Domain.Entities.ConvocationRequirement;
 import com.example.demo.Domain.Entities.Requirement;
 import com.example.demo.Domain.Enums.EnumConvocationState;
+import com.example.demo.Domain.Enums.EnumStateRequest;
 import com.example.demo.Domain.Exceptions.DomainValidationException;
 import com.example.demo.Domain.Interfaces.IConvocationRepository;
 import com.example.demo.Domain.Interfaces.IConvocationRequirementRepository;
@@ -26,6 +27,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -48,17 +50,19 @@ public class ConvocationService implements IConvocationService {
 
     @Override
     public List<ConvocationDto> getAllConvocation(){
+        LocalDate today = this.today();
         return this.convocationRepository.findAll().stream()
-                .map(this::withRequirements)
+                .map(convocation -> {
+                    convocation.applyDateRules(today);
+                    return this.withRequirements(convocation);
+                })
                 .map(this.convocationMapper::toDto)
                 .toList();
     }
 
     @Override
     public ConvocationDto getConvocationById(int convocationId) {
-        Convocation convocation = this.convocationRepository.findById(convocationId)
-                .orElseThrow(() -> new NotFoundException("No existe una convocatoria con id " + convocationId));
-        return this.convocationMapper.toDto(this.withRequirements(convocation));
+        return this.convocationMapper.toDto(this.withRequirements(this.findConvocation(convocationId)));
     }
 
     @Override
@@ -72,7 +76,7 @@ public class ConvocationService implements IConvocationService {
     @Transactional
     public ConvocationDto createConvocation(ConvocationDto convocationDto) {
         Convocation convocation = this.convocationMapper.toDomain(convocationDto);
-        convocation.validate(LocalDate.now(this.clock), this.getRequirementCatalog());
+        convocation.validate(this.today(), this.getRequirementCatalog());
         convocation.setState(EnumConvocationState.OPEN);
 
         Convocation createdConvocation = this.convocationRepository.save(convocation);
@@ -87,15 +91,19 @@ public class ConvocationService implements IConvocationService {
     @Override
     @Transactional
     public ConvocationDto updateConvocation(int convocationId, ConvocationDto convocationDto) {
-        Convocation currentConvocation = this.convocationRepository.findById(convocationId)
-                .orElseThrow(() -> new NotFoundException("No existe una convocatoria con id " + convocationId));
+        Convocation currentConvocation = this.findConvocation(convocationId);
+        currentConvocation.ensureCanBeEdited();
 
         Convocation convocation = this.convocationMapper.toDomain(convocationDto);
         convocation.setId(convocationId);
         convocation.setState(currentConvocation.getState());
-        convocation.validateChanges(currentConvocation.getStartDate(), LocalDate.now(this.clock), this.getRequirementCatalog());
+        convocation.validateChanges(currentConvocation.getStartDate(), this.today(), this.getRequirementCatalog());
 
-        Set<Integer> currentRequirementIds = this.convocationRequirementRepository.findConvocationRequirements(convocationId).stream()
+        List<ConvocationRequirement> currentRequirements = this.convocationRequirementRepository.findConvocationRequirements(convocationId);
+        if (this.requestRepository.existsByConvocationId(convocationId)) {
+            convocation.ensureRequirementRulesUnchanged(currentRequirements);
+        }
+        Set<Integer> currentRequirementIds = currentRequirements.stream()
                 .map(ConvocationRequirement::getId)
                 .collect(Collectors.toSet());
         List<ConvocationRequirement> convocationRequirements = convocation.getConvocationRequirements();
@@ -129,17 +137,61 @@ public class ConvocationService implements IConvocationService {
     @Override
     @Transactional
     public void deleteConvocation(int convocationId) {
-        this.convocationRepository.findById(convocationId)
-                .orElseThrow(() -> new NotFoundException("No existe una convocatoria con id " + convocationId));
-        // A convocation with requests is not deleted, so no application is lost; it will be cancelled instead (issue #30).
+        Convocation convocation = this.findConvocation(convocationId);
+        convocation.ensureCanBeDeleted();
+        // A convocation with requests is not deleted, so no application is lost; it is cancelled instead.
         if (this.requestRepository.existsByConvocationId(convocationId)) {
-            throw new ConflictException("La convocatoria tiene solicitudes de estudiantes y no se puede eliminar");
+            throw new ConflictException("La convocatoria tiene solicitudes de estudiantes y no se puede eliminar; puede cancelarla");
         }
         List<Integer> requirementIds = this.convocationRequirementRepository.findConvocationRequirements(convocationId).stream()
                 .map(ConvocationRequirement::getId)
                 .toList();
         this.convocationRequirementRepository.deleteByIds(requirementIds);
         this.convocationRepository.deleteById(convocationId);
+    }
+
+    @Override
+    @Transactional
+    public ConvocationDto closeConvocation(int convocationId) {
+        return this.changeState(convocationId, Convocation::close);
+    }
+
+    @Override
+    @Transactional
+    public ConvocationDto reopenConvocation(int convocationId, LocalDate newEndDate) {
+        return this.changeState(convocationId, convocation -> convocation.reopen(newEndDate, this.today()));
+    }
+
+    @Override
+    @Transactional
+    public ConvocationDto finishConvocation(int convocationId) {
+        boolean hasUndecidedRequests = this.requestRepository.existsByConvocationIdAndStateIn(convocationId, EnumStateRequest.UNDECIDED);
+        return this.changeState(convocationId, convocation -> convocation.finish(hasUndecidedRequests));
+    }
+
+    @Override
+    @Transactional
+    public ConvocationDto cancelConvocation(int convocationId, String reason) {
+        return this.changeState(convocationId, convocation -> convocation.cancel(reason));
+    }
+
+    /** Loads the convocation, lets its current state apply the transition and saves the result. */
+    private ConvocationDto changeState(int convocationId, Consumer<Convocation> transition) {
+        Convocation convocation = this.findConvocation(convocationId);
+        transition.accept(convocation);
+        return this.convocationMapper.toDto(this.withRequirements(this.convocationRepository.save(convocation)));
+    }
+
+    /** Finds the convocation with its effective state: an open one whose end date passed is treated as closed. */
+    private Convocation findConvocation(int convocationId) {
+        Convocation convocation = this.convocationRepository.findById(convocationId)
+                .orElseThrow(() -> new NotFoundException("No existe una convocatoria con id " + convocationId));
+        convocation.applyDateRules(this.today());
+        return convocation;
+    }
+
+    private LocalDate today() {
+        return LocalDate.now(this.clock);
     }
 
     private Map<Integer, Requirement> getRequirementCatalog() {

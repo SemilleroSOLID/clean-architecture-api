@@ -2,7 +2,7 @@
 
 Propuesta del ciclo de vida de una convocatoria (issue [#30](https://github.com/SemilleroSOLID/clean-architecture-api/issues/30)). Sirve para definir qué estados existen, qué evento hace pasar de uno a otro y qué se puede hacer en cada uno, antes de cambiar el código. Es la base para evaluar el patrón State ([#31](https://github.com/SemilleroSOLID/clean-architecture-api/issues/31)).
 
-**Estado:** decisiones tomadas por el equipo el 10 de octubre de 2026, pendientes de validar con la profesora.
+**Estado:** decisiones tomadas por el equipo el 10 de octubre de 2026, pendientes de validar con la profesora. Implementado con el patrón State en [#31](https://github.com/SemilleroSOLID/clean-architecture-api/issues/31).
 
 ## Lo que ya está decidido
 
@@ -77,14 +77,80 @@ Tomadas por el equipo el 10 de octubre de 2026 para no detener el desarrollo. Se
 | 3 | ¿El paso a Cerrada es automático? | **Sí, calculado en el dominio.** | Si está Abierta y ya pasó la fecha de fin, la entidad `Convocation` la trata como Cerrada al consultarla o al intentar una acción. No necesita una tarea programada y la regla queda en el dominio. |
 | 4 | ¿Se puede reabrir una convocatoria cerrada? | **Sí, con una nueva fecha de fin posterior a hoy.** | Permite dar más plazo, por ejemplo si se presentaron pocos estudiantes. La nueva fecha es obligatoria porque si no el cierre automático la volvería a cerrar. Finalizada y Cancelada siguen siendo definitivas. |
 
-## Cambios de código que implicaría
+## Implementación: patrón State
 
-Se harán después de aprobar el diagrama, en [#31](https://github.com/SemilleroSOLID/clean-architecture-api/issues/31) o en issues nuevos:
+**Decisión ([#31](https://github.com/SemilleroSOLID/clean-architecture-api/issues/31)):** se aplica el patrón State. Con cuatro estados, seis transiciones y reglas distintas en cada estado, sin el patrón las reglas terminarían como condicionales `if (estado == ...)` repetidos en los servicios. Con el patrón, cada estado es una clase del dominio que decide qué acciones permite y a qué estado pasa, y agregar un estado nuevo no obliga a modificar los servicios (principio abierto/cerrado).
 
-- Agregar `FINISHED` y `CANCELLED` a `EnumConvocationState` y la justificación de cancelación a la convocatoria.
-- Mover a la entidad `Convocation` (dominio) las reglas de la tabla de acciones permitidas, por ejemplo rechazar la edición de una convocatoria cerrada.
-- Endpoints para cerrar, reabrir, finalizar y cancelar, con sus botones en el detalle.
-- El estado efectivo calculado en el dominio: Abierta con fecha de fin vencida se trata como Cerrada (decisión 3).
+```mermaid
+classDiagram
+    direction LR
+    class Convocation {
+        -EnumConvocationState state
+        -String cancellationReason
+        +applyDateRules(today)
+        +ensureCanBeEdited()
+        +ensureCanBeDeleted()
+        +close()
+        +reopen(newEndDate, today)
+        +finish(hasUndecidedRequests)
+        +cancel(reason)
+        +canReceiveRequests(today) boolean
+        +canDecideRequests() boolean
+    }
+    class ConvocationState {
+        <<interface>>
+        +value() EnumConvocationState
+        +applyDateRules(convocation, today)
+        +ensureCanBeEdited(convocation)
+        +ensureCanBeDeleted(convocation)
+        +close(convocation)
+        +reopen(convocation, newEndDate, today)
+        +finish(convocation, hasUndecidedRequests)
+        +cancel(convocation, reason)
+        +canReceiveRequests(convocation, today) boolean
+        +canDecideRequests() boolean
+    }
+    class BaseConvocationState {
+        <<abstract>>
+        #label() String
+        #notAllowed(action) InvalidConvocationStateException
+    }
+    class OpenState {
+        applyDateRules: cierra si venció
+        edit, delete, close, cancel
+        canReceiveRequests: dentro de las fechas
+    }
+    class ClosedState {
+        reopen, finish, cancel
+        canDecideRequests: true
+    }
+    class FinishedState
+    class CancelledState
+    class ConvocationStates {
+        +of(EnumConvocationState)$ ConvocationState
+    }
+    Convocation ..> ConvocationStates : obtiene su estado
+    ConvocationStates ..> ConvocationState
+    ConvocationState <|.. BaseConvocationState
+    BaseConvocationState <|-- OpenState
+    BaseConvocationState <|-- ClosedState
+    BaseConvocationState <|-- FinishedState
+    BaseConvocationState <|-- CancelledState
+```
+
+- **Dónde está:** `src/main/java/com/example/demo/Domain/States`. Es código del dominio, sin Spring ni JPA; en la base de datos se sigue guardando solo el id del estado (`stateConvocationId`).
+- **Cómo funciona:** `BaseConvocationState` rechaza todas las acciones por defecto con el mensaje *"No se puede {acción} una convocatoria {estado}"* (respuesta 400). Cada estado sobrescribe solo lo que permite. `Convocation` no conoce las reglas: delega en el objeto de su estado actual, que obtiene de `ConvocationStates`.
+- **Servicio:** `ConvocationService` carga la convocatoria, aplica la regla de fechas (cierre automático) y llama al método de la convocatoria. No tiene condicionales sobre el estado.
+- **Pruebas:** `ConvocationStateTest` cubre cada transición válida e inválida de los cuatro estados.
+
+| Acción | Endpoint |
+|---|---|
+| Cerrar | `PUT /convocation/closeConvocation/{id}` |
+| Reabrir | `PUT /convocation/reopenConvocation/{id}` con `{ "endDate": "AAAA-MM-DD" }` |
+| Finalizar | `PUT /convocation/finishConvocation/{id}` |
+| Cancelar | `PUT /convocation/cancelConvocation/{id}` con `{ "reason": "..." }` |
+
+La notificación a los estudiantes al cancelar queda para [#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20). Los estados de la solicitud (anexo) se pueden modelar con el mismo patrón cuando se implementen [#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17) y [#19](https://github.com/SemilleroSOLID/clean-architecture-api/issues/19).
 
 ## Anexo: estados de una solicitud
 

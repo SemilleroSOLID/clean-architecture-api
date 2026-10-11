@@ -28,6 +28,17 @@ public class ConvocationEntity {
     private Date endDate;
      @Column(name = "stateConvocationId", nullable = false, length = 255)
     private Integer stateConvocationId;
+
+    @Column(name = "cancellationReason", length = 500)
+    private String cancellationReason;
+
+    public String getCancellationReason() {
+        return cancellationReason;
+    }
+
+    public void setCancellationReason(String cancellationReason) {
+        this.cancellationReason = cancellationReason;
+    }
     
 
 
