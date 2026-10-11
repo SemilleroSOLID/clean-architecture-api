@@ -29,5 +29,8 @@ public interface ConvocationState {
 
     boolean canReceiveRequests(Convocation convocation, LocalDate today);
 
+    /** Rejects a new request with a message that explains why the convocation does not receive it. */
+    void ensureCanReceiveRequests(Convocation convocation, LocalDate today);
+
     boolean canDecideRequests();
 }

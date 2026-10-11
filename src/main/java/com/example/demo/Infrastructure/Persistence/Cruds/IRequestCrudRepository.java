@@ -8,4 +8,5 @@ import java.util.Collection;
 public interface IRequestCrudRepository extends CrudRepository<RequestEntity, Integer> {
     boolean existsByConvocationId(Integer convocationId);
     boolean existsByConvocationIdAndRequestStateIn(Integer convocationId, Collection<Integer> requestStates);
+    boolean existsByStudentIdAndConvocationId(Integer studentId, Integer convocationId);
 }

@@ -89,6 +89,13 @@ class ConvocationStateTest {
         }
 
         @Test
+        void explainsWhyItDoesNotReceiveRequestsYet() {
+            Convocation notStarted = convocation(EnumConvocationState.OPEN, TODAY.plusDays(2), TODAY.plusDays(9));
+            assertNotAllowed(() -> notStarted.ensureCanReceiveRequests(TODAY), "La convocatoria aún no recibe solicitudes: abre el 12/10/2026");
+            assertDoesNotThrow(() -> convocation(EnumConvocationState.OPEN).ensureCanReceiveRequests(TODAY));
+        }
+
+        @Test
         void requestsAreNotDecidedWhileOpen() {
             assertFalse(convocation(EnumConvocationState.OPEN).canDecideRequests());
         }
@@ -178,6 +185,7 @@ class ConvocationStateTest {
             assertNotAllowed(() -> convocation.finish(false), "No se puede finalizar una convocatoria " + label);
             assertNotAllowed(() -> convocation.cancel("motivo"), "No se puede cancelar una convocatoria " + label);
             assertFalse(convocation.canReceiveRequests(TODAY));
+            assertNotAllowed(() -> convocation.ensureCanReceiveRequests(TODAY), "No se puede postular a una convocatoria " + label);
             assertFalse(convocation.canDecideRequests());
             assertEquals(state, convocation.getState());
         }

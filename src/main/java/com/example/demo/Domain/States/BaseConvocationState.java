@@ -59,6 +59,11 @@ abstract class BaseConvocationState implements ConvocationState {
     }
 
     @Override
+    public void ensureCanReceiveRequests(Convocation convocation, LocalDate today) {
+        throw notAllowed("postular a");
+    }
+
+    @Override
     public boolean canDecideRequests() {
         return false;
     }

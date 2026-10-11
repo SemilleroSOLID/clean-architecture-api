@@ -2,7 +2,6 @@ package com.example.demo.Infrastructure.Persistence.Entities;
 
 import jakarta.persistence.*;
 
-import java.io.File;
 
 @Entity
 @Table(name = "RequestRequirement", schema = "dbo")
@@ -14,8 +13,8 @@ public class RequestRequirementEntity {
     @Column(name = "requestValue", nullable = false, length = 255)
     private String requestValue;
 
-     @Column(name = "attachment", nullable = false)
-    private File attachment;
+     @Column(name = "attachment", length = 500)
+    private String attachment;
 
      @Column(name = "requestId", nullable = false)
     private Integer requestId;
@@ -39,11 +38,11 @@ public class RequestRequirementEntity {
         this.requestValue = requestValue;
     }
 
-    public File getAttachment() {
+    public String getAttachment() {
         return attachment;
     }
 
-    public void setAttachment(File attachment) {
+    public void setAttachment(String attachment) {
         this.attachment = attachment;
     }
 

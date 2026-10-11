@@ -127,6 +127,10 @@ public class Convocation implements Serializable {
         return currentState().canReceiveRequests(this, today);
     }
 
+    public void ensureCanReceiveRequests(LocalDate today) {
+        currentState().ensureCanReceiveRequests(this, today);
+    }
+
     public boolean canDecideRequests() {
         return currentState().canDecideRequests();
     }
