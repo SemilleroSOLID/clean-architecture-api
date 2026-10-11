@@ -33,6 +33,10 @@ Project for see clean architecture examples
 
 Quick check: `GET http://localhost:3001/ms-logica-negocio/api/test/hello`
 
+## Diagrams
+
+- [Convocation states](diagramas/estados-convocatoria.md): proposed lifecycle of a convocation (states, transitions and allowed actions), issue #30.
+
 ## Configuration
 
 `src/main/resources/application-dev.properties` reads these environment variables (defaults in parentheses):
