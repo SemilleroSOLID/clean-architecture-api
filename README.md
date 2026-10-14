@@ -36,7 +36,7 @@ Este repositorio es el **backend** y también la **documentación principal** de
 | Repositorio | Rol | Documentación |
 |---|---|---|
 | **clean-architecture-api** (este) | API REST con las reglas del negocio | Este documento |
-| [clean-architecture-front-main](https://github.com/SemilleroSOLID/clean-architecture-front-main) | Aplicación web para administradores y estudiantes | [README del front](https://github.com/SemilleroSOLID/clean-architecture-front-main#readme) |
+| [clean-architecture-front](https://github.com/SemilleroSOLID/clean-architecture-front) | Aplicación web para administradores y estudiantes | [README del front](https://github.com/SemilleroSOLID/clean-architecture-front#readme) |
 | [clean-architecture-notification](https://github.com/SemilleroSOLID/clean-architecture-notification) | Microservicio de notificaciones por eventos | [README de notificaciones](https://github.com/SemilleroSOLID/clean-architecture-notification#readme) |
 
 ## Contenido
@@ -70,7 +70,7 @@ Está dividido en tres aplicaciones independientes que se comunican por HTTP y p
 flowchart LR
     U([Administrador<br/>Estudiante]) --> F
 
-    subgraph front["clean-architecture-front-main"]
+    subgraph front["clean-architecture-front"]
         F["React 18 + Vite<br/>Ant Design"]
     end
 
@@ -509,7 +509,7 @@ cd ../../clean-architecture-api
 docker compose up -d --build
 
 # 3. Front
-cd ../clean-architecture-front-main
+cd ../clean-architecture-front
 npm install
 cp .env.example .env
 npm run dev
