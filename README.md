@@ -502,7 +502,7 @@ Decisiones:
 - **El estudiante sale del token.** `createRequest` y `cancelRequest` ya no reciben `studentId`: si alguien lo manda en el cuerpo, se ignora.
 - **Un estudiante no ve solicitudes de otro:** el detalle y el historial ajenos responden 403 (lo revisa `RequestService`, porque depende del dueño de cada solicitud).
 - **Sin sesión en el servidor:** cada petición trae su token; por eso no hay cookie ni protección CSRF. El token dura 8 horas (`JWT_EXPIRATION_MINUTES`).
-- **401 y 403 con el mismo formato** `CustomResponse` que el resto de errores. Un token vencido o alterado responde *"La sesión no es válida o venció"*, para que el front ([#23](https://github.com/SemilleroSOLID/clean-architecture-api/issues/23)) vuelva al login.
+- **401 y 403 con el mismo formato** `CustomResponse` que el resto de errores. Un token vencido o alterado responde *"La sesión no es válida o venció"*; el front ([#23](https://github.com/SemilleroSOLID/clean-architecture-api/issues/23)) borra la sesión y vuelve al login con ese aviso.
 
 Usuarios de desarrollo (los crea `create-database.sql`):
 
@@ -726,7 +726,7 @@ El trabajo se organiza en [issues](https://github.com/SemilleroSOLID/clean-archi
 | 1 · Convocatorias (CU-001) | Crear, consultar, editar, eliminar y listar; validaciones; refactor a Clean Architecture; diagrama de estados. | ✅ Terminada |
 | 2 · Solicitudes (CU-002) | Estudiantes, creación de solicitudes, verificación automática de requisitos y formulario de postulación en el front. | ✅ Terminada |
 | 3 · Gestión y notificaciones | Ver, aprobar y rechazar solicitudes, historial y retiro del estudiante, eventos en RabbitMQ y correo real al estudiante. | ✅ Terminada |
-| 4 · Autenticación y roles | JWT con roles Administrador y Estudiante en el backend listo. Falta el login y las rutas protegidas en el front ([#23](https://github.com/SemilleroSOLID/clean-architecture-api/issues/23)). | 🔄 En curso |
+| 4 · Autenticación y roles | JWT con roles Administrador y Estudiante en el backend, login, menú por rol y rutas protegidas en el front. | ✅ Terminada |
 | 5 · Calidad y despliegue | Patrón State listo. Faltan pruebas con Mockito, pruebas de integración, GitHub Actions, Docker Compose único y diagramas de despliegue y entidad-relación. | 🔄 En curso |
 
 Al terminar el backlog la estructura de capas será la misma; crece el contenido de cada una:
