@@ -58,9 +58,9 @@ class RequestDecisionTest {
 
     @Test
     void aDecidedRequestCannotBeDecidedAgain() {
-        assertEquals("No se puede aprobar una solicitud que ya fue rechazada",
+        assertEquals("No se puede aprobar una solicitud rechazada",
                 errorOf(() -> request(EnumStateRequest.REJECT).approve(convocation(EnumConvocationState.CLOSED)), "state"));
-        assertEquals("No se puede rechazar una solicitud que ya fue aprobada",
+        assertEquals("No se puede rechazar una solicitud aprobada",
                 errorOf(() -> request(EnumStateRequest.ACCEPT).reject(convocation(EnumConvocationState.CLOSED), "motivo"), "state"));
     }
 

@@ -22,4 +22,7 @@ public interface IRequestService {
     RequestDetailDto approveRequest(int requestId);
 
     RequestDetailDto rejectRequest(int requestId, String comment);
+
+    /** The student withdraws one of his requests that is still in review. */
+    StudentRequestDto cancelRequest(int requestId, int studentId);
 }

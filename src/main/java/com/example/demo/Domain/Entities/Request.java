@@ -2,7 +2,8 @@ package com.example.demo.Domain.Entities;
 
 import com.example.demo.Domain.Enums.EnumStateRequest;
 import com.example.demo.Domain.Exceptions.DomainValidationException;
-import com.example.demo.Domain.Exceptions.InvalidRequestStateException;
+import com.example.demo.Domain.States.RequestState;
+import com.example.demo.Domain.States.RequestStates;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -92,28 +93,28 @@ public class Request implements Serializable {
                 .findFirst();
     }
 
-    /** The administrator approves a request that was not decided yet, once its convocation is closed. */
+    // What can be done with the request depends on its state (State pattern, issue #19).
+    private RequestState currentState() {
+        return RequestStates.of(state);
+    }
+
+    /** The administrator approves a request in review, once its convocation is closed (#17). */
     public void approve(Convocation convocation) {
-        ensureCanBeDecided(convocation, "aprobar");
-        state = EnumStateRequest.ACCEPT;
+        currentState().approve(this, convocation);
     }
 
-    /** Like approving, but a justification is required: the student will read it (issue #18). */
+    /** Like approving, but a justification is required: the student will read it (#18). */
     public void reject(Convocation convocation, String comment) {
-        ensureCanBeDecided(convocation, "rechazar");
-        if (comment == null || comment.isBlank()) {
-            throw new DomainValidationException(Map.of("comment", "La justificación del rechazo es obligatoria"));
-        }
-        this.comment = comment.trim();
-        state = EnumStateRequest.REJECT;
+        currentState().reject(this, convocation, comment);
     }
 
-    private void ensureCanBeDecided(Convocation convocation, String action) {
-        if (!EnumStateRequest.UNDECIDED.contains(state)) {
-            throw new InvalidRequestStateException("No se puede " + action + " una solicitud que ya fue "
-                    + (state == EnumStateRequest.ACCEPT ? "aprobada" : "rechazada"));
-        }
-        convocation.ensureCanDecideRequests();
+    /** The student withdraws a request in review (#19). */
+    public void cancel() {
+        currentState().cancel(this);
+    }
+
+    public boolean belongsTo(int studentId) {
+        return this.studentId == studentId;
     }
 
     public String getComment() {

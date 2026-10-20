@@ -372,6 +372,28 @@ Agregar un estado nuevo (por ejemplo *Suspendida*) es crear su clase y registrar
 
 El detalle completo, con las decisiones del equipo y el anexo de estados de la solicitud, está en [diagramas/estados-convocatoria.md](diagramas/estados-convocatoria.md).
 
+### Estados de una solicitud
+
+Las solicitudes siguen el mismo patrón desde [#19](https://github.com/SemilleroSOLID/clean-architecture-api/issues/19): `ReviewRequestState` (que comparten `PENDING` y `ACTIVE`) permite aprobar, rechazar y retirar; `AcceptedRequestState`, `RejectedRequestState` y `CancelledRequestState` son finales.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "En revisión" as Revision {
+        Pendiente: Pendiente (PENDING)<br/>no cumple algún requisito
+        Activa: Activa (ACTIVE)<br/>cumple todos
+    }
+    [*] --> Revision : el estudiante la envía<br/>(verificación automática, #14)
+    Revision --> Aprobada : aprobar (administrador)<br/>[convocatoria cerrada]
+    Revision --> Rechazada : rechazar (administrador)<br/>[convocatoria cerrada y justificación]
+    Revision --> Retirada : retirar (estudiante dueño)
+    Aprobada --> [*]
+    Rechazada --> [*]
+    Retirada --> [*]
+```
+
+Una solicitud retirada no se borra: queda `CANCELLED` en el historial del estudiante y ya no cuenta para la selección ni para finalizar la convocatoria. Detalle y diagrama de clases en el [anexo de estados](diagramas/estados-convocatoria.md#anexo-estados-de-una-solicitud).
+
 ## Recorrido de una petición
 
 Ejemplo: el administrador cierra la convocatoria 5 con `PUT /convocation/closeConvocation/5`.
@@ -481,6 +503,7 @@ Base: `http://localhost:3001/ms-logica-negocio/api`. Todas las respuestas tienen
 | GET | `/request/getAllRequests?convocationId=&state=` | Lista las solicitudes, de la más reciente a la más antigua. Los dos filtros son opcionales. |
 | GET | `/request/getRequestById/{id}` | Detalle con el estudiante, la convocatoria y, por cada requisito, el valor exigido, el valor del estudiante y si lo cumple. |
 | GET | `/request/getRequestsByStudent/{studentId}` | Historial de un estudiante: sus solicitudes con título, tipo, fechas y estado de la convocatoria, el estado de la solicitud y la justificación si fue rechazada. |
+| PUT | `/request/cancelRequest/{id}` | El estudiante retira su solicitud en revisión. Cuerpo: `{ "studentId": ... }`. Queda `CANCELLED`; 403 si no es el dueño. |
 | PUT | `/request/approveRequest/{id}` | Aprueba una solicitud sin decidir (`PENDING` o `ACTIVE`) de una convocatoria cerrada: queda `ACCEPT`. |
 | PUT | `/request/rejectRequest/{id}` | La rechaza con justificación obligatoria. Cuerpo: `{ "comment": "..." }`. Queda `REJECT` y la justificación se guarda para el estudiante. |
 | GET | `/test/hello` | Comprueba que el servidor responde. |

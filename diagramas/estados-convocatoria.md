@@ -150,23 +150,82 @@ classDiagram
 | Finalizar | `PUT /convocation/finishConvocation/{id}` |
 | Cancelar | `PUT /convocation/cancelConvocation/{id}` con `{ "reason": "..." }` |
 
-La notificación a los estudiantes al cancelar queda para [#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20). Los estados de la solicitud (anexo) se pueden modelar con el mismo patrón cuando se implementen [#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17) y [#19](https://github.com/SemilleroSOLID/clean-architecture-api/issues/19).
+La notificación a los estudiantes al cancelar queda para [#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20). Los estados de la solicitud usan el mismo patrón desde [#19](https://github.com/SemilleroSOLID/clean-architecture-api/issues/19) (ver el anexo).
 
 ## Anexo: estados de una solicitud
 
-Como referencia, con las decisiones ya aprobadas ([#14](https://github.com/SemilleroSOLID/clean-architecture-api/issues/14), [#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17), [#19](https://github.com/SemilleroSOLID/clean-architecture-api/issues/19)):
+Implementado en [#14](https://github.com/SemilleroSOLID/clean-architecture-api/issues/14), [#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17) y [#19](https://github.com/SemilleroSOLID/clean-architecture-api/issues/19):
 
 ```mermaid
 stateDiagram-v2
     direction LR
-    state "En revisión<br/>(Activa o Pendiente)" as Revision
-    [*] --> Revision : el estudiante la envía
-    Revision --> Aprobada : aprobar (administrador)
-    Revision --> Rechazada : rechazar (administrador)<br/>[con justificación]
-    Revision --> Cancelada : retirar (estudiante)
+    state "En revisión" as Revision {
+        Pendiente: Pendiente (PENDING)<br/>no cumple algún requisito
+        Activa: Activa (ACTIVE)<br/>cumple todos
+    }
+    [*] --> Revision : el estudiante la envía<br/>(verificación automática, #14)
+    Revision --> Aprobada : aprobar (administrador)<br/>[convocatoria cerrada]
+    Revision --> Rechazada : rechazar (administrador)<br/>[convocatoria cerrada y justificación]
+    Revision --> Retirada : retirar (estudiante dueño)
     Aprobada --> [*]
     Rechazada --> [*]
-    Cancelada --> [*]
+    Retirada --> [*]
 ```
 
-Al enviarla, la verificación automática la deja **Activa** si cumple todos los requisitos o **Pendiente** si no cumple alguno. Las dos esperan la decisión del administrador y tienen las mismas salidas; la diferencia es que en una solicitud pendiente el administrador ve qué requisitos no se cumplieron.
+Al enviarla, la verificación automática la deja **Activa** si cumple todos los requisitos o **Pendiente** si no cumple alguno. Las dos esperan la decisión del administrador y tienen las mismas salidas; la diferencia es que en una solicitud pendiente el administrador ve qué requisitos no se cumplieron. El sistema nunca la rechaza por sí solo.
+
+| Estado | Enum | Qué se puede hacer |
+|---|---|---|
+| **Pendiente** / **Activa** | `PENDING` / `ACTIVE` | El administrador la aprueba o la rechaza (con justificación) cuando la convocatoria está cerrada. El estudiante dueño la puede retirar en cualquier momento. |
+| **Aprobada** | `ACCEPT` | Nada: es final. |
+| **Rechazada** | `REJECT` | Nada: es final. El estudiante ve la justificación en *Mis solicitudes*. |
+| **Retirada** | `CANCELLED` | Nada: es final. Ya no cuenta para la selección. Se conserva para el historial en vez de borrarla. |
+
+### Implementación: patrón State
+
+Con tres acciones (aprobar, rechazar, retirar) y cinco estados, se aplica el mismo patrón que a la convocatoria. `Request` delega en el objeto de su estado; `BaseRequestState` rechaza todo con *"No se puede {acción} una solicitud {estado}"* y solo `ReviewRequestState`, que comparten `PENDING` y `ACTIVE`, permite las tres acciones. Que la convocatoria esté cerrada para decidir lo responde la convocatoria con su propio estado (`ensureCanDecideRequests`). Pruebas en `RequestStateTest` y `RequestDecisionTest`.
+
+```mermaid
+classDiagram
+    direction LR
+    class Request {
+        -EnumStateRequest state
+        -String comment
+        +approve(convocation)
+        +reject(convocation, comment)
+        +cancel()
+    }
+    class RequestState {
+        <<interface>>
+        +approve(request, convocation)
+        +reject(request, convocation, comment)
+        +cancel(request)
+    }
+    class BaseRequestState {
+        <<abstract>>
+        rechaza todo por defecto
+    }
+    class ReviewRequestState {
+        PENDING y ACTIVE
+        aprobar, rechazar, retirar
+    }
+    class AcceptedRequestState
+    class RejectedRequestState
+    class CancelledRequestState
+    class RequestStates {
+        +of(EnumStateRequest)$ RequestState
+    }
+    Request ..> RequestStates : pide su estado
+    RequestStates ..> RequestState
+    RequestState <|.. BaseRequestState
+    BaseRequestState <|-- ReviewRequestState
+    BaseRequestState <|-- AcceptedRequestState
+    BaseRequestState <|-- RejectedRequestState
+    BaseRequestState <|-- CancelledRequestState
+```
+
+| Acción | Endpoint |
+|---|---|
+| Aprobar | `PUT /request/approveRequest/{id}` |
+| Rechazar | `PUT /request/rejectRequest/{id}` con `{ "comment": "..." }` |
+| Retirar | `PUT /request/cancelRequest/{id}` con `{ "studentId": ... }` (403 si no es el dueño; el estudiante vendrá del login en #22) |

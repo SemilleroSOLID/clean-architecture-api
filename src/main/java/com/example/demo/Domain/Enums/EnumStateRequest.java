@@ -6,7 +6,9 @@ public enum EnumStateRequest {
     PENDING(1),
     ACTIVE(2),
     REJECT(3),
-    ACCEPT(4);
+    ACCEPT(4),
+    // Withdrawn by the student (issue #19); kept for the history instead of deleting the request.
+    CANCELLED(5);
 
     /** Requests that still wait for the administrator's decision. */
     public static final Set<EnumStateRequest> UNDECIDED = Set.of(PENDING, ACTIVE);

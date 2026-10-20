@@ -207,6 +207,7 @@ classDiagram
         +validateAgainst(convocationRequirements)
         +approve(convocation)
         +reject(convocation, comment)
+        +cancel()
         +verifyRequirements(convocationRequirements) List
         +unmetRequirements(convocationRequirements) List
     }
@@ -236,6 +237,7 @@ classDiagram
         ACTIVE
         REJECT
         ACCEPT
+        CANCELLED
     }
     class EnumConditionRequirement {
         <<enumeration>>
@@ -246,6 +248,9 @@ classDiagram
         GREATER
     }
     class ConvocationState {
+        <<interface>>
+    }
+    class RequestState {
         <<interface>>
     }
 
@@ -259,6 +264,7 @@ classDiagram
     Convocation --> EnumConvocationType
     Convocation ..> ConvocationState : delega según su estado
     Request --> EnumStateRequest
+    Request ..> RequestState : delega según su estado
     ConvocationRequirement --> EnumConditionRequirement
     ConvocationType .. EnumConvocationType : mismo id
 ```

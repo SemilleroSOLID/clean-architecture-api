@@ -1,6 +1,7 @@
 package com.example.demo.Api.Controllers;
 
 import com.example.demo.Api.Dtos.CustomResponse;
+import com.example.demo.Application.Dtos.CancelRequestDto;
 import com.example.demo.Application.Dtos.RejectRequestDto;
 import com.example.demo.Application.Dtos.RequestDetailDto;
 import com.example.demo.Application.Dtos.RequestDto;
@@ -64,5 +65,11 @@ public class RequestController {
     @GetMapping("/getRequestsByStudent/{studentId}")
     public CustomResponse<List<StudentRequestDto>> getRequestsByStudent(@PathVariable("studentId") Integer studentId) {
         return new CustomResponse<>(this.requestService.getRequestsByStudent(studentId), "Solicitudes del estudiante");
+    }
+
+    @PutMapping("/cancelRequest/{requestId}")
+    public CustomResponse<StudentRequestDto> cancelRequest(@PathVariable("requestId") Integer requestId,
+                                                           @Valid @RequestBody CancelRequestDto cancel) {
+        return new CustomResponse<>(this.requestService.cancelRequest(requestId, cancel.getStudentId()), "Solicitud retirada");
     }
 }

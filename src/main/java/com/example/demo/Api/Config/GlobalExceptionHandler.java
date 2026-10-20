@@ -2,6 +2,7 @@ package com.example.demo.Api.Config;
 
 import com.example.demo.Api.Dtos.CustomResponse;
 import com.example.demo.Application.Exceptions.ConflictException;
+import com.example.demo.Application.Exceptions.ForbiddenException;
 import com.example.demo.Application.Exceptions.NotFoundException;
 import com.example.demo.Domain.Exceptions.DomainValidationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -24,6 +25,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<CustomResponse<Object>> handleNotFound(NotFoundException exception) {
         CustomResponse<Object> response = new CustomResponse<>(null, HttpStatus.NOT_FOUND.value(), exception.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<CustomResponse<Object>> handleForbidden(ForbiddenException exception) {
+        CustomResponse<Object> response = new CustomResponse<>(null, HttpStatus.FORBIDDEN.value(), exception.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
     @ExceptionHandler(ConflictException.class)

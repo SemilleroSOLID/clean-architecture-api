@@ -5,6 +5,7 @@ import com.example.demo.Application.Dtos.RequestDto;
 import com.example.demo.Application.Dtos.RequestSummaryDto;
 import com.example.demo.Application.Dtos.StudentRequestDto;
 import com.example.demo.Application.Exceptions.ConflictException;
+import com.example.demo.Application.Exceptions.ForbiddenException;
 import com.example.demo.Application.Exceptions.NotFoundException;
 import com.example.demo.Application.IRequestService;
 import com.example.demo.Application.Mappers.RequestMapper;
@@ -148,6 +149,17 @@ public class RequestService implements IRequestService {
         Convocation convocation = this.findConvocationOf(request);
         request.reject(convocation, comment);
         return this.toDetailDto(this.saveDecision(request), convocation);
+    }
+
+    @Override
+    @Transactional
+    public StudentRequestDto cancelRequest(int requestId, int studentId) {
+        Request request = this.findRequest(requestId);
+        if (!request.belongsTo(studentId)) {
+            throw new ForbiddenException("Solo el estudiante que hizo la solicitud puede retirarla");
+        }
+        request.cancel();
+        return this.requestMapper.toStudentRequestDto(this.saveDecision(request), this.findConvocationOf(request));
     }
 
     // The notification to the student of each decision is published in #20.
