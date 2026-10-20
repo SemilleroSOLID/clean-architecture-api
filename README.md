@@ -24,7 +24,7 @@
   <a href="#empezar-rápido">Empezar rápido</a> ·
   <a href="#clean-architecture-en-este-proyecto">Clean Architecture</a> ·
   <a href="#ciclo-de-vida-de-una-convocatoria">Estados</a> ·
-  <a href="#antipatrones-dónde-cómo-y-por-qué">Antipatrones</a> ·
+  <a href="#patrones-de-diseño-implementados">Patrones de diseño</a> ·
   <a href="#pruebas">Pruebas</a> ·
   <a href="#cómo-contribuir">Contribuir</a>
 </p>
@@ -51,16 +51,15 @@ Este repositorio es el **backend** y también la **documentación principal** de
 8. [Recorrido de una petición](#recorrido-de-una-petición)
 9. [Eventos de notificación](#eventos-de-notificación)
 10. [Seguridad: login con JWT y roles](#seguridad-login-con-jwt-y-roles)
-11. [Patrones de diseño](#patrones-de-diseño)
-12. [Antipatrones: dónde, cómo y por qué](#antipatrones-dónde-cómo-y-por-qué)
-13. [Estructura de carpetas](#estructura-de-carpetas)
-14. [Cómo agregar una funcionalidad](#cómo-agregar-una-funcionalidad)
-15. [Endpoints](#endpoints)
-16. [Cómo ejecutar todo el sistema](#cómo-ejecutar-todo-el-sistema)
-17. [Pruebas](#pruebas)
-18. [Cómo contribuir](#cómo-contribuir)
-19. [Diagramas](#diagramas)
-20. [Qué falta](#qué-falta)
+11. [Patrones de diseño implementados](#patrones-de-diseño-implementados)
+12. [Estructura de carpetas](#estructura-de-carpetas)
+13. [Cómo agregar una funcionalidad](#cómo-agregar-una-funcionalidad)
+14. [Endpoints](#endpoints)
+15. [Cómo ejecutar todo el sistema](#cómo-ejecutar-todo-el-sistema)
+16. [Pruebas](#pruebas)
+17. [Cómo contribuir](#cómo-contribuir)
+18. [Diagramas](#diagramas)
+19. [Qué falta](#qué-falta)
 
 ## Empezar rápido
 
@@ -99,7 +98,7 @@ En PowerShell, cambia `$(pwd)` por `${PWD}`.
 1. [Clean Architecture en este proyecto](#clean-architecture-en-este-proyecto) y [Las cuatro capas](#las-cuatro-capas): dónde va cada cosa y por qué.
 2. [Ciclo de vida de una convocatoria](#ciclo-de-vida-de-una-convocatoria): el patrón State, que es el corazón del dominio.
 3. [Recorrido de una petición](#recorrido-de-una-petición) y los [diagramas de secuencia](diagramas/diagrama-secuencia.md): cómo viaja una petición por las capas.
-4. [Antipatrones](#antipatrones-dónde-cómo-y-por-qué): qué no copiar y por qué está así.
+4. [Patrones de diseño implementados](#patrones-de-diseño-implementados): qué patrón resuelve cada problema y dónde verlo en el código.
 5. [Pruebas](#pruebas) y [Cómo contribuir](#cómo-contribuir): para tomar una de las [pruebas pendientes](#qué-falta).
 
 ## Visión general
@@ -280,7 +279,7 @@ grep -rn "import com.example.demo.Infrastructure" src/main/java/com/example/demo
 | **Reglas dentro de las entidades** | Los servicios no validan fechas ni preguntan por el estado: llaman a `convocation.validate(...)`, `convocation.close()`, `request.validateAgainst(...)`. |
 | **Errores sin HTTP en el dominio** | El dominio lanza `DomainValidationException`; solo `GlobalExceptionHandler` sabe que eso es un 400. |
 
-> **Concesión consciente.** Application usa anotaciones de Spring (`@Service`, `@Autowired`, `@Transactional`). En una versión estricta esa capa tampoco dependería del framework. Se acepta porque simplifica el proyecto y no afecta lo esencial: **el dominio es Java puro** y se prueba sin Spring. Está explicado con los demás [antipatrones](#antipatrones-dónde-cómo-y-por-qué).
+> **Concesión consciente.** Application usa anotaciones de Spring (`@Service`, `@Autowired`, `@Transactional`). En una versión estricta esa capa tampoco dependería del framework. Se acepta porque simplifica el proyecto y no afecta lo esencial: **el dominio es Java puro** y se prueba sin Spring.
 
 ## Ciclo de vida de una convocatoria
 
@@ -446,7 +445,51 @@ Una solicitud retirada no se borra: queda `CANCELLED` en el historial del estudi
 
 ## Recorrido de una petición
 
-Ejemplo: el administrador cierra la convocatoria 5 con `PUT /convocation/closeConvocation/5`.
+Ejemplo: el administrador cierra la convocatoria 5 con `PUT /convocation/closeConvocation/5`. Cada caja es una capa; fíjate en que **la caja Domain no llama a nadie hacia afuera**: el servicio usa la interfaz `IConvocationRepository`, que es del dominio, y la implementación de Infrastructure se conecta por inyección de dependencias.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as Administrador
+    box rgba(229,231,235,0.6) Api
+        participant Ctrl as ConvocationController
+    end
+    box rgba(219,234,254,0.6) Application
+        participant Svc as ConvocationService
+    end
+    box rgba(255,243,196,0.8) Domain
+        participant Port as IConvocationRepository<br/>(puerto)
+        participant Conv as Convocation
+        participant St as Estado actual<br/>(OpenState, ClosedState...)
+    end
+    box rgba(229,231,235,0.6) Infrastructure
+        participant Repo as ConvocationRepository<br/>(adaptador JPA)
+        participant DB as SQL Server
+    end
+
+    Admin->>Ctrl: PUT /convocation/closeConvocation/5
+    Ctrl->>Svc: closeConvocation(5)
+    Svc->>Port: findById(5)
+    Port->>Repo: implementado por
+    Repo->>DB: SELECT
+    DB-->>Repo: fila
+    Repo-->>Svc: Convocation (convertida desde ConvocationEntity)
+    Svc->>Conv: applyDateRules(hoy) y close()
+    Conv->>St: close(convocation)
+    alt la convocatoria está abierta
+        St-->>Conv: estado = CLOSED
+        Svc->>Port: save(convocation)
+        Port->>Repo: implementado por
+        Repo->>DB: UPDATE
+        Svc-->>Ctrl: ConvocationDto
+        Ctrl-->>Admin: 200 CustomResponse
+    else está en otro estado
+        St-->>Svc: InvalidConvocationStateException
+        Ctrl-->>Admin: 400 "No se puede cerrar una convocatoria cerrada"
+    end
+```
+
+Paso a paso:
 
 1. **Api.** `ConvocationController.closeConvocation(5)` llama a `IConvocationService.closeConvocation(5)`.
 2. **Application.** `ConvocationService` busca la convocatoria con `IConvocationRepository.findById(5)`.
@@ -455,7 +498,7 @@ Ejemplo: el administrador cierra la convocatoria 5 con `PUT /convocation/closeCo
 5. **Infrastructure.** El servicio guarda con `IConvocationRepository.save(...)`.
 6. **Api.** El controlador responde `200` con un `CustomResponse`. Si hubo una excepción, `GlobalExceptionHandler` responde 400, 404 o 409.
 
-Los recorridos completos, con los casos de error, están en [diagramas/diagrama-secuencia.md](diagramas/diagrama-secuencia.md).
+Los recorridos de los demás casos de uso, con sus errores, están en [diagramas/diagrama-secuencia.md](diagramas/diagrama-secuencia.md).
 
 ## Eventos de notificación
 
@@ -486,6 +529,48 @@ El mensaje sale al exchange `event.drivent.exchange` con la routing key `email` 
 }
 ```
 
+Así se ve al aprobar una solicitud. Las reglas (que la solicitud esté en revisión y la convocatoria cerrada) las decide el dominio; RabbitMQ es un detalle de Infrastructure que el servicio solo conoce por su interfaz:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as Administrador
+    box rgba(229,231,235,0.6) Api
+        participant Ctrl as RequestController
+    end
+    box rgba(219,234,254,0.6) Application
+        participant Svc as RequestService
+        participant Pub as IRabbitMQSender<br/>(puerto)
+    end
+    box rgba(255,243,196,0.8) Domain
+        participant Req as Request
+        participant St as ReviewRequestState<br/>(patrón State)
+        participant Conv as Convocation
+    end
+    box rgba(229,231,235,0.6) Infrastructure
+        participant Repo as RequestRepository
+        participant MQ as RabbitMQSender
+    end
+
+    Admin->>Ctrl: PUT /request/approveRequest/9
+    Ctrl->>Svc: approveRequest(9)
+    Svc->>Repo: findById(9) (por IRequestRepository)
+    Svc->>Req: approve(convocation)
+    Req->>St: approve(request, convocation)
+    St->>Conv: ensureCanDecideRequests()
+    alt convocatoria cerrada
+        St-->>Req: estado = ACCEPT
+        Svc->>Repo: save(request)
+        Svc->>Pub: publishRequestStatusChanged(evento)
+        Pub->>MQ: implementado por
+        Note over MQ: se envía después del commit
+        Ctrl-->>Admin: 200
+    else convocatoria abierta
+        Conv-->>Svc: InvalidConvocationStateException
+        Ctrl-->>Admin: 400 "La convocatoria sigue abierta..."
+    end
+```
+
 Cómo está repartido entre las capas:
 
 | Capa | Pieza | Qué hace |
@@ -509,24 +594,39 @@ Todos los endpoints, salvo el login y `/test/hello`, piden un token. Hay dos rol
 sequenceDiagram
     autonumber
     actor U as Usuario
-    participant Auth as AuthController<br/>(Api)
-    participant Svc as AuthService<br/>(Application)
-    participant Hash as BCryptPasswordHasher<br/>(Infrastructure)
-    participant Tok as JwtTokenProvider<br/>(Infrastructure)
-    participant F as JwtAuthenticationFilter<br/>(Api)
-    participant Ctrl as RequestController<br/>(Api)
+    box rgba(229,231,235,0.6) Api
+        participant Auth as AuthController
+        participant F as JwtAuthenticationFilter
+        participant Ctrl as RequestController
+    end
+    box rgba(219,234,254,0.6) Application
+        participant Svc as AuthService
+        participant Ports as IPasswordHasher<br/>ITokenProvider (puertos)
+    end
+    box rgba(255,243,196,0.8) Domain
+        participant UPort as IUserRepository<br/>(puerto)
+        participant User as User
+    end
+    box rgba(229,231,235,0.6) Infrastructure
+        participant Adapters as BCryptPasswordHasher<br/>JwtTokenProvider<br/>UserRepository
+    end
 
     U->>Auth: POST /auth/login { email, password }
     Auth->>Svc: login(dto)
-    Svc->>Hash: matches(password, hash guardado)
+    Svc->>UPort: findByEmail(email)
+    UPort->>Adapters: implementado por UserRepository
+    Adapters-->>Svc: User (rol y studentId)
+    Svc->>Ports: matches(password, user.passwordHash)
+    Ports->>Adapters: implementado por BCrypt
     alt correo inexistente o contraseña incorrecta
         Svc-->>U: 401 "Correo o contraseña incorrectos"
     else credenciales correctas
-        Svc->>Tok: issue(usuario)
+        Svc->>Ports: issue(usuario)
+        Ports->>Adapters: implementado por JwtTokenProvider
         Svc-->>U: 200 { token, rol, studentId, nombre, expiresAt }
     end
     U->>F: GET /request/getMyRequests<br/>Authorization: Bearer token
-    F->>Tok: read(token)
+    F->>Ports: read(token)
     Note over F: Token válido: el usuario y su rol<br/>quedan en la petición. Si no, 401.
     F->>Ctrl: getMyRequests(usuario)
     Note over Ctrl: El studentId sale del token,<br/>nunca del cuerpo de la petición
@@ -555,91 +655,112 @@ Usuarios de desarrollo (los crea `create-database.sql`):
 | `admin@ucaldas.test` | `Admin2026*` | ADMIN |
 | `laura.gomez@ucaldas.test`, `andres.torres@ucaldas.test`, `valentina.herrera@ucaldas.test`, `santiago.ramirez@ucaldas.test`, `camila.ospina@ucaldas.test` | `Estudiante2026*` | STUDENT |
 
-## Patrones de diseño
+## Patrones de diseño implementados
 
-| Patrón | Dónde | Para qué |
-|---|---|---|
-| **Repository** | `Domain/Interfaces` + `Infrastructure/Persistence/Repositories` | Esconder cómo se guardan los datos detrás de una interfaz del dominio. |
-| **Adapter** | `ConvocationRepository`, `RabbitMQSender` | Adaptar una tecnología a la interfaz que pide el núcleo. |
-| **DTO** | `Application/Dtos` | Separar el contrato JSON de las entidades. |
-| **Mapper** | `Application/Mappers`, `Infrastructure/Mappers` | Convertir entre DTO, dominio y entidad JPA, cada uno en su capa. |
-| **State** | `Domain/States` | Reglas de cada estado de la convocatoria en su propia clase. |
-| **Simple Factory** | `ConvocationStates.of(enum)` | Obtener el objeto de estado a partir del enum guardado. |
-| **Dependency Injection** | Todo el backend | Spring entrega las implementaciones de las interfaces. |
-| **Publish / Subscribe** | RabbitMQ + notificaciones | Desacoplar el envío de notificaciones del backend. |
-| **Chain of Responsibility** | Filtros de Spring Security + `JwtAuthenticationFilter` | Cada filtro revisa la petición y la pasa al siguiente; el del JWT pone el usuario antes de las reglas de acceso. |
+Un **patrón de diseño** es una solución conocida a un problema que se repite. Esta tabla resume los que están en el código; debajo se explica cada uno con dónde verlo.
 
-## Antipatrones: dónde, cómo y por qué
+| Patrón | Tipo | Dónde | Problema que resuelve |
+|---|---|---|---|
+| [State](#state) | Comportamiento | `Domain/States` | Que cada estado de la convocatoria y de la solicitud decida qué acciones permite. |
+| [Simple Factory](#simple-factory) | Creacional | `ConvocationStates.of`, `RequestStates.of`, `ConsumerFactory` (notificaciones) | Obtener el objeto correcto sin `if` ni `switch`. |
+| [Template Method](#template-method) | Comportamiento | `BaseConvocationState`, `BaseRequestState`, `Consumer` (notificaciones) | Escribir una sola vez lo común y dejar a cada subclase solo lo que cambia. |
+| [Repository](#repository-y-adapter-puertos-y-adaptadores) | Estructural | `Domain/Interfaces` + `Infrastructure/Persistence/Repositories` | Que el dominio guarde y consulte sin saber que existe SQL Server. |
+| [Adapter](#repository-y-adapter-puertos-y-adaptadores) | Estructural | `ConvocationRepository`, `RabbitMQSender`, `BCryptPasswordHasher`, `JwtTokenProvider` | Conectar una tecnología a la interfaz que pide el núcleo. |
+| [DTO y Mapper](#dto-y-mapper) | Estructural | `Application/Dtos`, `Application/Mappers`, `Infrastructure/Mappers` | Separar el JSON y las tablas del modelo de negocio. |
+| [Inyección de dependencias](#inyección-de-dependencias) | Creacional | Todo el backend (Spring) | Que cada clase reciba lo que necesita en lugar de crearlo. |
+| [Publish / Subscribe](#publish--subscribe) | Comportamiento (arquitectura) | `RabbitMQSender` → RabbitMQ → consumidor de notificaciones | Avisar al estudiante sin que el backend espere al correo. |
+| [Chain of Responsibility](#chain-of-responsibility) | Comportamiento | Filtros de Spring Security + `JwtAuthenticationFilter` | Revisar cada petición en pasos encadenados antes de llegar al controlador. |
+| [Retry y cola de fallidos](#retry-y-cola-de-fallidos) | Resiliencia | Consumidor de notificaciones | Que un fallo pasajero del correo no pierda la notificación. |
 
-Un **antipatrón** es una solución que parece práctica pero trae problemas conocidos. En este proyecto hay algunos: unos vienen del código original y otros se aceptaron a propósito para que el proyecto fuera simple de levantar y de entender. Se documentan aquí para que **no se copien sin pensar** y para saber qué mejorar si el proyecto crece.
+En el front se usan además **Provider** (`AuthProvider` comparte la sesión con React Context), un **guardia de rutas** (`ProtectedRoute`) e **Interceptor** (Axios agrega el token a cada petición); están en el [README del front](https://github.com/SemilleroSOLID/clean-architecture-front#sesión-y-rutas-por-rol).
 
-### Los que hay en el código
+### State
 
-**1. Inyección por campo (`@Autowired` en los atributos)**
-- **Dónde:** 43 campos en 19 clases: servicios, controladores y repositorios. Ejemplo: `@Autowired private IRequestRepository requestRepository;` en `RequestService`.
-- **Por qué se usó:** era el estilo del código original y requiere menos código que un constructor.
-- **Qué problema trae:** las dependencias quedan escondidas (no se ven en un constructor), los campos no pueden ser `final` y, para probar la clase, Mockito tiene que meterlas por reflexión con `@InjectMocks`. Por eso `AuthService` y `RabbitMQSender` tienen un constructor extra solo para las pruebas.
-- **Cómo se corrige:** inyección por constructor con campos `private final`. `JwtTokenProvider` y `SecurityErrorWriter` ya lo hacen así.
+- **Problema:** una convocatoria abierta se puede editar y una cerrada no; una solicitud en revisión se puede aprobar y una aprobada no. Sin el patrón, cada servicio tendría `if (state == OPEN) ... else if ...` repetidos.
+- **Cómo está:** cada estado es una clase (`OpenState`, `ClosedState`, `ReviewRequestState`, `AcceptedRequestState`...). La entidad no decide: le delega a su estado actual.
+- **Dónde verlo:** [Ciclo de vida de una convocatoria](#cómo-está-implementado-patrón-state) lo explica con su diagrama de clases, y `ConvocationStateTest` y `RequestStateTest` prueban cada transición.
 
-**2. Setters públicos en las entidades del dominio**
-- **Dónde:** `Convocation`, `Request` y las demás entidades tienen todos sus setters públicos, incluido `setState(...)`.
-- **Por qué se usó:** los mappers reconstruyen las entidades desde la base y desde los DTO con setters, y así venían las clases.
-- **Qué problema trae:** cualquier clase puede saltarse las reglas: `request.setState(ACCEPT)` aprueba una solicitud sin pasar por el patrón State ni revisar que la convocatoria esté cerrada. Hoy solo lo usan los estados y los mappers, pero nada lo impide.
-- **Cómo se corrige:** que el estado solo cambie con `approve`, `reject`, `cancel`, `close`...; reconstruir las entidades con un constructor o un método de fábrica (`Request.restore(...)`) y dejar los setters de estado con visibilidad de paquete.
+```java
+// Request: no hay ningún if sobre el estado
+public void approve(Convocation convocation) {
+    currentState().approve(this, convocation);
+}
+```
 
-**3. La capa Application depende del framework**
-- **Dónde:** `@Service`, `@Autowired` y `@Transactional` en los servicios, y anotaciones de Bean Validation (`@NotBlank`, `@Positive`) en los DTO.
-- **Por qué se usó:** es una concesión consciente: evita tener que crear a mano cada servicio.
-- **Qué problema trae:** los casos de uso quedan atados a Spring; en una Clean Architecture estricta, Application no conoce ningún framework.
-- **Cómo se corrige:** crear los servicios con métodos `@Bean` en una clase de configuración de la capa Api, y validar el formato en el borde (controladores).
+### Simple Factory
 
-**4. URLs con verbos (estilo RPC en vez de REST)**
-- **Dónde:** `GET /convocation/getAllConvocations`, `POST /convocation/createConvocation`, `PUT /convocation/closeConvocation/{id}`...
-- **Por qué se usó:** así estaba la API original y el front ya la consumía; renombrarlas rompía el front sin mejorar ninguna regla del negocio.
-- **Qué problema trae:** repite en la URL lo que ya dice el método HTTP, las rutas son largas e inconsistentes y no se aprovechan las convenciones de REST.
-- **Cómo se corrige:** recursos en plural y el verbo en el método HTTP: `GET /convocations`, `POST /convocations`, `GET /convocations/{id}`, `POST /convocations/{id}/close`, idealmente con versión (`/api/v1/...`).
+- **Problema:** en la base de datos se guarda el estado como un número; hay que obtener el objeto de estado que corresponde.
+- **Cómo está:** `RequestStates.of(estado)` devuelve el objeto de un mapa. Como los estados no guardan datos, hay **una sola instancia de cada uno**, compartida por todas las solicitudes.
+- **Dónde verlo:** `Domain/States/ConvocationStates.java` y `RequestStates.java`. En el repositorio de notificaciones, `ConsumerFactory` devuelve el consumidor según el canal (`email`, `sms`, `whatsapp`), y el consumidor de Python hace lo mismo con `NewConsumer`.
 
-**5. Un puerto con nombre de tecnología**
-- **Dónde:** `IRabbitMQSender`, en la capa Application.
-- **Por qué se usó:** el nombre venía del código original.
-- **Qué problema trae:** es una *abstracción con fugas*: el caso de uso "sabe" que existe RabbitMQ. Si se cambiara por Kafka, habría que renombrar el puerto aunque el caso de uso no cambie.
-- **Cómo se corrige:** nombrarlo por lo que hace, por ejemplo `IEventPublisher` o `INotificationPublisher`.
+```java
+public final class RequestStates {
+    private static final Map<EnumStateRequest, RequestState> STATES = Map.of(
+            EnumStateRequest.PENDING, new ReviewRequestState(EnumStateRequest.PENDING),
+            EnumStateRequest.ACTIVE, new ReviewRequestState(EnumStateRequest.ACTIVE),
+            EnumStateRequest.ACCEPT, new AcceptedRequestState(),
+            EnumStateRequest.REJECT, new RejectedRequestState(),
+            EnumStateRequest.CANCELLED, new CancelledRequestState());
 
-**6. Dos dueños del esquema de la base de datos**
-- **Dónde:** `create-database.sql` crea `Requirement`, `Student`, `ConvocationType` y `Users` con sus datos; las tablas `Convocation`, `ConvocationRequirement`, `Request` y `RequestRequirement` **no están en el script**: las crea Hibernate al arrancar (`spring.jpa.hibernate.ddl-auto=update`), que también agrega columnas nuevas, como el comentario de las solicitudes.
-- **Por qué se usó:** en desarrollo es lo más rápido: se cambia una entidad y la tabla se ajusta sola.
-- **Qué problema trae:** no hay un único lugar que diga cómo es la base; `update` nunca borra columnas ni migra datos, y una base creada en otro momento puede quedar distinta.
-- **Cómo se corrige:** migraciones versionadas (Flyway o Liquibase) con todo el esquema, y `ddl-auto=validate` para que Hibernate solo compruebe.
+    public static RequestState of(EnumStateRequest state) {
+        return STATES.get(state);
+    }
+}
+```
 
-**7. Secretos en el repositorio**
-- **Dónde:** la contraseña de `sa` en `sqlserver.Dockerfile` y `application-dev.properties`, `admin` / `admin` de RabbitMQ, la clave JWT por defecto y las contraseñas de los usuarios de prueba.
-- **Por qué se usó:** para que todo el sistema arranque con un solo comando, sin configurar nada; es un proyecto académico y esos valores son solo de desarrollo.
-- **Qué problema trae:** cualquiera con acceso al repositorio conoce las claves; desplegarlo así sería inseguro.
-- **Cómo se corrige:** variables de entorno en un `.env` que no se sube, secretos del CI o de la plataforma de despliegue, y una clave JWT distinta por entorno (`JWT_SECRET`).
+Agregar un estado es crear su clase y registrarla aquí; quien usa la fábrica no cambia (principio abierto/cerrado).
 
-**8. El token guardado en `localStorage` (front)**
-- **Dónde:** `utils/session.util.js` del front.
-- **Por qué se usó:** con JWT y sin sesión en el servidor, es la forma más simple de que la sesión sobreviva al recargar la página.
-- **Qué problema trae:** si la página tuviera una vulnerabilidad XSS, un script podría leer el token y suplantar al usuario.
-- **Cómo se corrige:** que el backend entregue el token en una cookie `HttpOnly`, `Secure` y `SameSite` (con protección CSRF), o guardarlo solo en memoria con un *refresh token*.
+### Template Method
 
-**9. La topología de RabbitMQ declarada en dos lugares**
-- **Dónde:** el exchange y la cola se declaran en `RabbitMQService` (Java) y en `rabbit.constant.ts` (consumidor de Node).
-- **Por qué se usó:** cada servicio puede arrancar aunque el otro no esté.
-- **Qué problema trae:** si uno cambia el nombre o las opciones (por ejemplo `durable`), el otro falla. El nombre `event.drivent` (con un error de escritura de *driven*) está repetido en los dos, y corregirlo exige cambiar ambos a la vez.
-- **Cómo se corrige:** un solo dueño de la topología, o un contrato compartido y versionado entre los servicios.
+- **Problema:** todos los estados rechazan las acciones que no permiten con el mismo tipo de mensaje; solo cambia el nombre del estado.
+- **Cómo está:** la clase base tiene el comportamiento común (rechazar todo con *"No se puede {acción} una convocatoria {estado}"*) y deja un método abstracto, `label()`, que cada subclase completa. Cada estado sobrescribe solo las acciones que sí permite.
+- **Dónde verlo:** `BaseConvocationState` y `BaseRequestState`. En notificaciones, `Consumer` tiene el procesamiento común de cada mensaje (confirmarlo aunque falle) y deja `consumeMessage` a cada canal.
 
-### Los que se evitaron
+```java
+abstract class BaseRequestState implements RequestState {
+    protected abstract String label();                  // lo que cambia: "aprobada", "rechazada"...
 
-| Antipatrón | Qué sería | Cómo se evitó |
-|---|---|---|
-| **Modelo de dominio anémico** | Entidades con solo getters y setters, y todas las reglas en los servicios | Las reglas viven en `Convocation`, `Request` y sus estados; los servicios solo coordinan. |
-| **Condicionales por estado repetidos** | `if (state == OPEN) ... else if (state == CLOSED)` en cada servicio | Patrón State: cada estado es una clase. |
-| **Base de datos compartida entre servicios** | El servicio de notificaciones leyendo la base del backend | El backend publica un evento con todo lo que el correo necesita. |
-| **Lógica de negocio en la vista** | El front decide qué se puede hacer | El front solo oculta botones como ayuda; el backend vuelve a validar todo. |
-| **Confiar en los datos del cliente** | Tomar el `studentId` del cuerpo de la petición | Se toma del token. |
-| **Excepciones tragadas** | `catch` vacíos que esconden errores | Cada error termina en un `CustomResponse` con su código; si RabbitMQ no responde, queda registrado en el log. |
-| **Esperas fijas al arrancar** | `sleep 30` antes de usar la base de datos | Healthchecks en el compose y reintentos de conexión. |
+    public void approve(Request request, Convocation convocation) {
+        throw notAllowed("aprobar");                    // lo común: rechazar por defecto
+    }
+}
+```
+
+### Repository y Adapter (puertos y adaptadores)
+
+- **Problema:** el dominio necesita guardar y consultar, pero no debe depender de JPA ni de SQL Server.
+- **Cómo está:** el dominio define la interfaz (**puerto**), por ejemplo `IConvocationRepository`, y dice *qué* necesita. Infrastructure la implementa (**adaptador**) con Spring Data JPA y convierte `ConvocationEntity` ↔ `Convocation`. Lo mismo pasa con los puertos de Application: `IRabbitMQSender` (implementado con RabbitMQ), `IPasswordHasher` (con BCrypt) e `ITokenProvider` (con JWT).
+- **Dónde verlo:** en los diagramas de secuencia de este README, la llamada al puerto (caja Domain o Application) aparece seguida de *"implementado por"* el adaptador (caja Infrastructure).
+- **Por qué:** es la [regla de dependencias](#cómo-se-cumple-la-regla-de-dependencias) en la práctica, y permite probar los servicios simulando los puertos con Mockito.
+
+### DTO y Mapper
+
+- **Problema:** el JSON que pide el front, las tablas de la base y el modelo del negocio cambian por razones distintas.
+- **Cómo está:** tres modelos separados (`ConvocationDto`, `Convocation`, `ConvocationEntity`) y un mapper en cada frontera: `ConvocationMapper` (DTO ↔ dominio, en Application) y `ConvocationPersistenceMapper` (dominio ↔ entidad JPA, en Infrastructure).
+- **Por qué:** si el front pide un campo nuevo cambian el DTO y su mapper, no la entidad del negocio.
+
+### Inyección de dependencias
+
+- **Problema:** si `RequestService` creara su propio repositorio con `new`, quedaría atado a SQL Server y no se podría probar con un repositorio simulado.
+- **Cómo está:** Spring crea los objetos y entrega a cada clase las implementaciones de las interfaces que pide. En las pruebas, Mockito hace ese trabajo con `@InjectMocks`.
+
+### Publish / Subscribe
+
+- **Problema:** enviar un correo puede tardar o fallar, y eso no debe demorar ni romper la aprobación de una solicitud.
+- **Cómo está:** el backend **publica** el evento `REQUEST_STATUS_CHANGED` en RabbitMQ y responde de inmediato; el servicio de notificaciones está **suscrito** a la cola y envía el correo cuando puede. Ninguno conoce al otro: solo comparten el formato del mensaje.
+- **Dónde verlo:** [Eventos de notificación](#eventos-de-notificación). Agregar otro canal (SMS) es agregar otro suscriptor, sin tocar el backend.
+
+### Chain of Responsibility
+
+- **Problema:** cada petición debe pasar por varios controles (CORS, leer el token, revisar el rol) antes de llegar al controlador.
+- **Cómo está:** Spring Security encadena filtros; cada uno hace su parte y pasa la petición al siguiente. `JwtAuthenticationFilter` se agrega a la cadena: si el token es válido deja el usuario en la petición; si no, la cadena termina en 401 o 403.
+- **Dónde verlo:** `Api/Config/Security/SecurityConfig.java`.
+
+### Retry y cola de fallidos
+
+- **Problema:** si el servidor de correo falla un momento, el mensaje no debería perderse; y un mensaje mal formado no debería detener el consumidor.
+- **Cómo está:** el consumidor reintenta el envío hasta 3 veces, esperando un poco más cada vez; si no lo logra, o si el mensaje no es un evento válido, lo aparta en la cola `event.drivent.email.failed` con el motivo, y sigue con el siguiente.
+- **Dónde verlo:** el [README de notificaciones](https://github.com/SemilleroSOLID/clean-architecture-notification#qué-pasa-cuando-algo-falla).
 
 ## Estructura de carpetas
 
