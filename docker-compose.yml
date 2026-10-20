@@ -1,3 +1,6 @@
+# The whole system with one command (issue #27): docker compose up -d --build
+# The front and the notification service are built from their repositories, cloned next to this one
+# (paths in .env, see .env.example). Every service talks to the others by name inside the network.
 services:
   sqlserver:
     build:
@@ -7,13 +10,48 @@ services:
       ACCEPT_EULA: "Y"
     ports:
       - "1435:1433"
+    volumes:
+      # The data survives recreating the container; create-database.sql only runs on an empty volume
+      - sqlserver-data:/var/opt/mssql
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -d CleanArchitectureDB -Q \"SELECT 1 FROM ConvocationType\" || exit 1"]
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$SA_PASSWORD\" -d CleanArchitectureDB -Q \"SELECT 1 FROM Users\" || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 30
       start_period: 30s
+    networks:
+      - mynetwork
 
+  rabbitmq:
+    image: rabbitmq:3.8-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      # "ping" answers before the AMQP port accepts connections; this checks the listeners themselves
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
+    networks:
+      - mynetwork
+
+  # Development SMTP server: catches the emails to the students and shows them in http://localhost:8025
+  mailpit:
+    image: axllent/mailpit:v1.21.8
+    environment:
+      MP_DATABASE: /data/mailpit.db
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    volumes:
+      - mailpit-data:/data
     networks:
       - mynetwork
 
@@ -22,17 +60,59 @@ services:
     depends_on:
       sqlserver:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       DB_HOST: sqlserver
       DB_PORT: 1433
-      RABBITMQ_HOST: host.docker.internal
-      RABBITMQ_PORT: 5673
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
     ports:
       - "3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/3001' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 30s
     networks:
       - mynetwork
+
+  notification:
+    build: ${NOTIFICATION_DIR:-../clean-architecture-notification}/node
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    environment:
+      AMQP_URL: amqp://admin:admin@rabbitmq:5672/
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      APP_URL: http://localhost:5173
+    # The consumer stops if it loses RabbitMQ: start it again
+    restart: unless-stopped
+    networks:
+      - mynetwork
+
+  front:
+    build:
+      context: ${FRONT_DIR:-../clean-architecture-front}
+      args:
+        # The browser calls the api, so it is the address seen from the host
+        VITE_API_HOST: http://localhost:3001/ms-logica-negocio/api
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+    networks:
+      - mynetwork
+
+volumes:
+  sqlserver-data:
+  rabbitmq-data:
+  mailpit-data:
 
 networks:
   mynetwork:

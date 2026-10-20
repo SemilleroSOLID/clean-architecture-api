@@ -39,3 +39,6 @@ out/
 
 ### Docs ###
 docs/
+
+### Docker Compose: local paths of the other repositories ###
+.env

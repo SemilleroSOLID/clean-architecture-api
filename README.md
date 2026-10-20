@@ -630,46 +630,75 @@ Salvo `/auth/login` y `/test/hello`, todos piden `Authorization: Bearer <token>`
 
 ## Cómo ejecutar todo el sistema
 
+Desde [#27](https://github.com/SemilleroSOLID/clean-architecture-api/issues/27) todo el sistema se levanta con **un solo comando**, con el `docker-compose.yml` de este repositorio.
+
 ### Requisitos
 
 - Docker y Docker Compose.
-- Node.js 22 para el front y Node.js 20 para el consumidor de notificaciones.
-- Java 17 solo si se quiere compilar o correr las pruebas fuera de Docker.
-- Los tres repositorios clonados en la misma carpeta.
+- Los tres repositorios clonados en la misma carpeta:
 
-### Pasos
-
-```bash
-# 1. RabbitMQ y Mailpit (repositorio de notificaciones)
-cd clean-architecture-notification/node
-docker compose up -d
-
-# 2. SQL Server + backend (este repositorio)
-cd ../../clean-architecture-api
-docker compose up -d --build
-
-# 3. Front
-cd ../clean-architecture-front
-npm install
-cp .env.example .env
-npm run dev
-
-# 4. Consumidor de notificaciones (envía los correos a Mailpit)
-cd ../clean-architecture-notification/node
-npm install
-cp .env.example .env
-npm run start:consumer -- email
+```text
+carpeta/
+├── clean-architecture-api            ← este repositorio (aquí está el docker-compose.yml)
+├── clean-architecture-front
+└── clean-architecture-notification
 ```
 
-El contenedor `sqlserver` ejecuta `create-database.sql` al iniciar: crea `CleanArchitectureDB` y carga los requisitos, los tipos de convocatoria y cinco estudiantes de ejemplo. El backend espera a que la base de datos esté lista.
+Si las carpetas tienen otro nombre, copia `.env.example` a `.env` y ajusta `FRONT_DIR` y `NOTIFICATION_DIR`.
 
-| Servicio | Dirección |
+### Levantar todo
+
+```bash
+cd clean-architecture-api
+docker compose up -d --build
+```
+
+La primera vez tarda unos minutos en construir las imágenes; después arranca en menos de un minuto. `docker compose ps` muestra el estado: cuando el backend dice `healthy`, todo está listo.
+
+```mermaid
+flowchart LR
+    B([Navegador]) -->|":5173"| F["front<br/>nginx con el build de React"]
+    B -->|":3001"| BE["backend<br/>Spring Boot"]
+    BE -->|"sqlserver:1433"| DB[("sqlserver")]
+    BE -->|"rabbitmq:5672"| MQ{"rabbitmq"}
+    MQ --> N["notification<br/>consumidor de Node"]
+    N -->|"mailpit:1025"| M["mailpit"]
+    B -->|":8025"| M
+```
+
+| Servicio | Dirección | Notas |
+|---|---|---|
+| Front | http://localhost:5173 | Build de producción servido por nginx. Usuarios en [Seguridad](#seguridad-login-con-jwt-y-roles). |
+| Backend | http://localhost:3001/ms-logica-negocio/api | |
+| Mailpit | http://localhost:8025 | Buzón con los correos que reciben los estudiantes. |
+| RabbitMQ | `localhost:5673` · panel en http://localhost:15673 (`admin` / `admin`) | |
+| SQL Server | `localhost:1435` (usuario `sa`, contraseña en `sqlserver.Dockerfile`) | |
+
+Cómo está armado:
+
+- **Red interna:** cada servicio llama a los otros por su nombre (`sqlserver`, `rabbitmq`, `mailpit`); ya no se usa `host.docker.internal`. El navegador sí llama al backend por `localhost:3001`, por eso el front se construye con esa dirección.
+- **Orden de arranque con healthchecks:** el backend espera a que SQL Server tenga la base creada y a que RabbitMQ acepte conexiones; el front espera al backend. El consumidor además reintenta la conexión cada segundo y se reinicia solo si la pierde.
+- **Datos persistentes:** SQL Server, RabbitMQ y Mailpit guardan sus datos en volúmenes. `create-database.sql` solo se ejecuta cuando la base no existe, así que reiniciar o recrear un contenedor no borra ni duplica nada. Para empezar de cero: `docker compose down -v`.
+
+| Comando | Para qué |
 |---|---|
-| Front | http://localhost:5173 |
-| Backend | http://localhost:3001/ms-logica-negocio/api |
-| SQL Server | `localhost:1435` (usuario `sa`, contraseña en `sqlserver.Dockerfile`) |
-| RabbitMQ | `localhost:5673` · panel en http://localhost:15673 (`admin` / `admin`) |
-| Mailpit (correos de desarrollo) | http://localhost:8025 |
+| `docker compose up -d --build` | Levantar todo (y reconstruir lo que cambió). |
+| `docker compose ps` | Ver el estado de cada servicio. |
+| `docker compose logs -f notification` | Ver los eventos que procesa el consumidor. |
+| `docker compose up -d --build --no-deps backend` | Reconstruir solo el backend después de cambiar su código. |
+| `docker compose down` | Apagar todo conservando los datos. |
+| `docker compose down -v` | Apagar todo y borrar los datos. |
+
+### Trabajar en una sola pieza
+
+Para desarrollar el front o el consumidor con recarga automática, se apaga su contenedor y se corre localmente; el resto sigue en Docker:
+
+```bash
+docker compose stop front          # y en clean-architecture-front: npm install && npm run dev
+docker compose stop notification   # y en clean-architecture-notification/node: npm install && npm run start:consumer -- email
+```
+
+Los dos usan por defecto `localhost:3001`, `localhost:5673` y `localhost:1025`, que el compose publica. El `docker-compose.yml` del repositorio de notificaciones (solo RabbitMQ y Mailpit) sirve para trabajar en ese servicio sin el resto; no se debe levantar junto con este, porque usan los mismos puertos.
 
 ### Configuración del backend
 
@@ -684,7 +713,7 @@ El contenedor `sqlserver` ejecuta `create-database.sql` al iniciar: crea `CleanA
 | `JWT_SECRET` | Una clave de desarrollo. **En cualquier otro entorno se debe definir** (Base64, mínimo 32 bytes): con ella se firman los tokens. |
 | `JWT_EXPIRATION_MINUTES` | `480` (8 horas) |
 
-Dentro de Docker Compose el backend usa `sqlserver:1433` y llega a RabbitMQ por `host.docker.internal:5673`. La zona horaria de las reglas es `America/Bogota` (propiedad `app.time-zone`).
+Dentro de Docker Compose el backend usa `sqlserver:1433` y `rabbitmq:5672`. La zona horaria de las reglas es `America/Bogota` (propiedad `app.time-zone`).
 
 ## Pruebas
 
@@ -727,7 +756,7 @@ El trabajo se organiza en [issues](https://github.com/SemilleroSOLID/clean-archi
 | 2 · Solicitudes (CU-002) | Estudiantes, creación de solicitudes, verificación automática de requisitos y formulario de postulación en el front. | ✅ Terminada |
 | 3 · Gestión y notificaciones | Ver, aprobar y rechazar solicitudes, historial y retiro del estudiante, eventos en RabbitMQ y correo real al estudiante. | ✅ Terminada |
 | 4 · Autenticación y roles | JWT con roles Administrador y Estudiante en el backend, login, menú por rol y rutas protegidas en el front. | ✅ Terminada |
-| 5 · Calidad y despliegue | Patrón State listo. Faltan pruebas con Mockito, pruebas de integración, GitHub Actions, Docker Compose único y diagramas de despliegue y entidad-relación. | 🔄 En curso |
+| 5 · Calidad y despliegue | Patrón State y Docker Compose único ([#27](https://github.com/SemilleroSOLID/clean-architecture-api/issues/27)) listos. Faltan pruebas con Mockito, pruebas de integración, GitHub Actions y diagramas de despliegue y entidad-relación. | 🔄 En curso |
 
 Al terminar el backlog la estructura de capas será la misma; crece el contenido de cada una:
 
