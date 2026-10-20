@@ -743,7 +743,7 @@ Las pruebas del dominio crean los objetos con `new`, sin Spring ni base de datos
 
 ### Cómo escribir una prueba de servicio
 
-Las pruebas de los servicios se escriben **una clase por servicio**. Como ejemplo está hecha la de `StudentService`; las de los demás servicios las completan los estudiantes del semillero siguiendo ese modelo:
+Las pruebas de los servicios se escriben **una clase por servicio**. Como ejemplo está hecha la de `StudentService`. Las de los demás servicios están pendientes en issues abiertas y sin asignar: cualquiera puede tomar una, hacer un fork, levantar el sistema con Docker y escribirlas siguiendo ese modelo (cada issue explica los pasos):
 
 | Issue | Servicio | Cobertura hoy |
 |---|---|:-:|
@@ -827,7 +827,7 @@ El trabajo se organiza en [issues](https://github.com/SemilleroSOLID/clean-archi
 | 2 · Solicitudes (CU-002) | Estudiantes, creación de solicitudes, verificación automática de requisitos y formulario de postulación en el front. | ✅ Terminada |
 | 3 · Gestión y notificaciones | Ver, aprobar y rechazar solicitudes, historial y retiro del estudiante, eventos en RabbitMQ y correo real al estudiante. | ✅ Terminada |
 | 4 · Autenticación y roles | JWT con roles Administrador y Estudiante en el backend, login, menú por rol y rutas protegidas en el front. | ✅ Terminada |
-| 5 · Calidad y despliegue | Patrón State, Docker Compose único ([#27](https://github.com/SemilleroSOLID/clean-architecture-api/issues/27)) y prueba modelo de servicios ([#24](https://github.com/SemilleroSOLID/clean-architecture-api/issues/24)) listos. Faltan las pruebas de los demás servicios (estudiantes, #32 a #34), pruebas de integración, GitHub Actions y los diagramas por capas, de despliegue y entidad-relación. | 🔄 En curso |
+| 5 · Calidad y despliegue | Patrón State, Docker Compose único ([#27](https://github.com/SemilleroSOLID/clean-architecture-api/issues/27)) y prueba modelo de servicios ([#24](https://github.com/SemilleroSOLID/clean-architecture-api/issues/24)) listos. Faltan las pruebas de los demás servicios (issues abiertas #32 a #35), pruebas de integración, GitHub Actions y los diagramas por capas, de despliegue y entidad-relación. | 🔄 En curso |
 
 Al terminar el backlog la estructura de capas será la misma; crece el contenido de cada una:
 
