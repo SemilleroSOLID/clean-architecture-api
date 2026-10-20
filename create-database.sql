@@ -46,6 +46,29 @@ INSERT INTO Student (nameStudent, email, program, average, stratum) VALUES
     (N'Camila Ospina Duque', N'camila.ospina@ucaldas.test', N'Medicina', 4.9, 2);
 GO
 
+-- Users that can sign in (issue #22). Passwords are BCrypt hashes, never plain text.
+-- Development credentials: admin@ucaldas.test / Admin2026* and each student with its email / Estudiante2026*
+CREATE TABLE Users (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    email NVARCHAR(255) NOT NULL UNIQUE,
+    passwordHash NVARCHAR(100) NOT NULL,
+    -- ADMIN or STUDENT
+    role NVARCHAR(20) NOT NULL CHECK (role IN (N'ADMIN', N'STUDENT')),
+    -- Only students are linked to the Student table
+    studentId INT NULL REFERENCES Student(id),
+    CONSTRAINT CK_Users_StudentRole CHECK ((role = N'STUDENT' AND studentId IS NOT NULL) OR (role = N'ADMIN' AND studentId IS NULL))
+);
+GO
+
+INSERT INTO Users (email, passwordHash, role, studentId) VALUES
+    (N'admin@ucaldas.test', N'$2b$10$3wXOllnDtaSMxT45KyWYPufJ4LzeOoXSy4T/AZK0RcDK6mBpgzjUm', N'ADMIN', NULL),
+    (N'laura.gomez@ucaldas.test', N'$2b$10$75laSHdxP/hhmEmxcD9dAu9oJTYGcFaxxBKAp.rBoH/b5iPjg5nNC', N'STUDENT', 1),
+    (N'andres.torres@ucaldas.test', N'$2b$10$HAbQ14CUI.w5YCIg7WaGIunkX/UteCm15qzLSHF1L2PggakIOvLwC', N'STUDENT', 2),
+    (N'valentina.herrera@ucaldas.test', N'$2b$10$f10X2wM2n083jTBHqcguweh6REpDdxmCBitPEsAveM3V3zUZPhBCS', N'STUDENT', 3),
+    (N'santiago.ramirez@ucaldas.test', N'$2b$10$OaYTxSfYdSyqI4ghhgkIfuKPqHdifXCcUOKMcFDIiCbm01y.lfzcC', N'STUDENT', 4),
+    (N'camila.ospina@ucaldas.test', N'$2b$10$X.DK.04nNcEwBnuHgTqKjOK8lbCY1Hev4Lw.YrX5WtFOgzgojOJs2', N'STUDENT', 5);
+GO
+
 -- Insert data into ConvocationType table
 -- The ids must match EnumConvocationType: MONITORING=1, GRANT=2, RESIDENCE=3
 INSERT INTO ConvocationType (convocationTypeName) VALUES

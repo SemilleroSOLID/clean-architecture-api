@@ -1,7 +1,7 @@
 package com.example.demo.Api.Controllers;
 
 import com.example.demo.Api.Dtos.CustomResponse;
-import com.example.demo.Application.Dtos.CancelRequestDto;
+import com.example.demo.Application.Dtos.AuthenticatedUserDto;
 import com.example.demo.Application.Dtos.RejectRequestDto;
 import com.example.demo.Application.Dtos.RequestDetailDto;
 import com.example.demo.Application.Dtos.RequestDto;
@@ -11,6 +11,7 @@ import com.example.demo.Application.IRequestService;
 import com.example.demo.Domain.Enums.EnumStateRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,9 +33,11 @@ public class RequestController {
     @Autowired
     private IRequestService requestService;
 
+    // Who can call each endpoint is in Api/Config/SecurityConfig (issue #22); the student always comes from the token.
     @PostMapping("/createRequest")
-    public CustomResponse<RequestDto> createRequest(@Valid @RequestBody RequestDto request) {
-        RequestDto createdRequest = this.requestService.createRequest(request);
+    public CustomResponse<RequestDto> createRequest(@Valid @RequestBody RequestDto request,
+                                                    @AuthenticationPrincipal AuthenticatedUserDto user) {
+        RequestDto createdRequest = this.requestService.createRequest(request, user.getStudentId());
         String message = createdRequest.getUnmetRequirements().isEmpty() ? REQUEST_ACTIVE_MESSAGE : REQUEST_PENDING_MESSAGE;
         return new CustomResponse<>(createdRequest, message);
     }
@@ -46,8 +49,9 @@ public class RequestController {
     }
 
     @GetMapping("/getRequestById/{requestId}")
-    public CustomResponse<RequestDetailDto> getRequestById(@PathVariable("requestId") Integer requestId) {
-        RequestDetailDto request = this.requestService.getRequestById(requestId);
+    public CustomResponse<RequestDetailDto> getRequestById(@PathVariable("requestId") Integer requestId,
+                                                           @AuthenticationPrincipal AuthenticatedUserDto user) {
+        RequestDetailDto request = this.requestService.getRequestById(requestId, user);
         return new CustomResponse<>(request, "Solicitud con id " + request.getId());
     }
 
@@ -63,13 +67,19 @@ public class RequestController {
     }
 
     @GetMapping("/getRequestsByStudent/{studentId}")
-    public CustomResponse<List<StudentRequestDto>> getRequestsByStudent(@PathVariable("studentId") Integer studentId) {
-        return new CustomResponse<>(this.requestService.getRequestsByStudent(studentId), "Solicitudes del estudiante");
+    public CustomResponse<List<StudentRequestDto>> getRequestsByStudent(@PathVariable("studentId") Integer studentId,
+                                                                        @AuthenticationPrincipal AuthenticatedUserDto user) {
+        return new CustomResponse<>(this.requestService.getRequestsByStudent(studentId, user), "Solicitudes del estudiante");
+    }
+
+    @GetMapping("/getMyRequests")
+    public CustomResponse<List<StudentRequestDto>> getMyRequests(@AuthenticationPrincipal AuthenticatedUserDto user) {
+        return new CustomResponse<>(this.requestService.getRequestsByStudent(user.getStudentId(), user), "Mis solicitudes");
     }
 
     @PutMapping("/cancelRequest/{requestId}")
     public CustomResponse<StudentRequestDto> cancelRequest(@PathVariable("requestId") Integer requestId,
-                                                           @Valid @RequestBody CancelRequestDto cancel) {
-        return new CustomResponse<>(this.requestService.cancelRequest(requestId, cancel.getStudentId()), "Solicitud retirada");
+                                                           @AuthenticationPrincipal AuthenticatedUserDto user) {
+        return new CustomResponse<>(this.requestService.cancelRequest(requestId, user.getStudentId()), "Solicitud retirada");
     }
 }

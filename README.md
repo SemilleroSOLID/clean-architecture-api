@@ -49,14 +49,15 @@ Este repositorio es el **backend** y también la **documentación principal** de
 6. [Ciclo de vida de una convocatoria](#ciclo-de-vida-de-una-convocatoria)
 7. [Recorrido de una petición](#recorrido-de-una-petición)
 8. [Eventos de notificación](#eventos-de-notificación)
-9. [Patrones de diseño](#patrones-de-diseño)
-10. [Estructura de carpetas](#estructura-de-carpetas)
-11. [Cómo agregar una funcionalidad](#cómo-agregar-una-funcionalidad)
-12. [Endpoints](#endpoints)
-13. [Cómo ejecutar todo el sistema](#cómo-ejecutar-todo-el-sistema)
-14. [Pruebas](#pruebas)
-15. [Diagramas](#diagramas)
-16. [Estado del proyecto](#estado-del-proyecto)
+9. [Seguridad: login con JWT y roles](#seguridad-login-con-jwt-y-roles)
+10. [Patrones de diseño](#patrones-de-diseño)
+11. [Estructura de carpetas](#estructura-de-carpetas)
+12. [Cómo agregar una funcionalidad](#cómo-agregar-una-funcionalidad)
+13. [Endpoints](#endpoints)
+14. [Cómo ejecutar todo el sistema](#cómo-ejecutar-todo-el-sistema)
+15. [Pruebas](#pruebas)
+16. [Diagramas](#diagramas)
+17. [Estado del proyecto](#estado-del-proyecto)
 
 ## Visión general
 
@@ -169,10 +170,10 @@ No depende de nada: ni Spring, ni JPA, ni Jackson. Solo Java.
 | Contiene | Ejemplo |
 |---|---|
 | Entidades con reglas | `Convocation.validate(today, catalog)` revisa fechas y requisitos. `Request.validateAgainst(requirements)` revisa que la solicitud responda todos los requisitos y `Request.verifyRequirements(requirements)` la deja `ACTIVE` o `PENDING` según los cumpla. |
-| Enums del negocio | `EnumConvocationState`, `EnumStateRequest`, `EnumConvocationType`, `EnumConditionRequirement`. |
+| Enums del negocio | `EnumConvocationState`, `EnumStateRequest`, `EnumConvocationType`, `EnumConditionRequirement`, `EnumRole`. |
 | Patrón State | `Domain/States/`, una clase por estado de la convocatoria. |
 | Excepciones de negocio | `DomainValidationException` (mapa campo → mensaje) e `InvalidConvocationStateException`. |
-| Puertos de persistencia | `IConvocationRepository`, `IRequestRepository`... Dicen **qué** se necesita guardar o consultar, no **cómo**. |
+| Puertos de persistencia | `IConvocationRepository`, `IRequestRepository`, `IUserRepository`... Dicen **qué** se necesita guardar o consultar, no **cómo**. |
 
 La fecha de "hoy" no se obtiene dentro del dominio con `LocalDate.now()`: se recibe como parámetro. Así las pruebas fijan el día que necesitan y el dominio no depende del reloj del servidor.
 
@@ -186,9 +187,10 @@ Coordina. Un servicio carga lo que necesita mediante las interfaces del dominio,
 | Servicios | `ConvocationService.closeConvocation(id)`: carga, llama a `convocation.close()`, guarda. |
 | DTOs | `ConvocationDto`, `RequestDto`. Contrato con el front, con las anotaciones de Bean Validation. |
 | Mappers DTO ↔ dominio | `ConvocationMapper`, `RequestMapper`, `StudentMapper`. |
-| Excepciones de aplicación | `NotFoundException`, `ConflictException`, `ForbiddenException`. |
+| Excepciones de aplicación | `NotFoundException`, `ConflictException`, `ForbiddenException`, `UnauthorizedException`. |
 | Eventos | `RequestStatusChangedEvent`: el mensaje que se publica en cada cambio de estado de una solicitud. |
-| Puertos de salida | `IRabbitMQSender`: el servicio sabe que puede publicar un evento, no que es RabbitMQ. |
+| Puertos de salida | `IRabbitMQSender`: el servicio sabe que puede publicar un evento, no que es RabbitMQ. `IPasswordHasher` e `ITokenProvider`: sabe verificar una contraseña y emitir un token, no que son BCrypt y JWT. |
+| Usuario autenticado | `AuthenticatedUserDto`: el Api se lo pasa a los servicios como un dato más; ni Application ni Domain saben cómo se autenticó. |
 
 ### Infrastructure · los detalles técnicos
 
@@ -199,14 +201,16 @@ Coordina. Un servicio carga lo que necesita mediante las interfaces del dominio,
 | Adaptadores de repositorio | `ConvocationRepository implements IConvocationRepository`. |
 | Mappers de persistencia | `ConvocationPersistenceMapper`: `ConvocationEntity` ↔ `Convocation`. |
 | Mensajería | `RabbitMQSender implements IRabbitMQSender` y la topología en `RabbitMQService`. |
+| Seguridad | `BCryptPasswordHasher implements IPasswordHasher`, `JwtTokenProvider implements ITokenProvider`. |
 
 ### Api · la puerta de entrada
 
 | Contiene | Ejemplo |
 |---|---|
-| Controladores | `ConvocationController`, `RequestController`, `StudentController`, `RequirementsController`. Un método = una línea que llama al servicio. |
+| Controladores | `ConvocationController`, `RequestController`, `StudentController`, `RequirementsController`, `AuthController`. Un método = una línea que llama al servicio. |
 | Respuesta común | `CustomResponse<T>` con `data`, `codeState` y `message`. |
-| Errores | `GlobalExceptionHandler`: dominio inválido → 400, no existe → 404, conflicto → 409. |
+| Errores | `GlobalExceptionHandler`: dominio inválido → 400, credenciales incorrectas → 401, solicitud ajena → 403, no existe → 404, conflicto → 409. |
+| Seguridad | `Config/Security/SecurityConfig` (reglas por rol), `JwtAuthenticationFilter` (lee el token con `ITokenProvider`). |
 | Configuración | `ClockConfig` (zona `America/Bogota`), `JacksonConfig`, `WebConfig` (CORS). |
 
 ## Cómo se cumple la regla de dependencias
@@ -453,6 +457,60 @@ Dos reglas del publicador:
 
 El consumidor de Node envía el correo al estudiante con una plantilla por estado ([#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21)); en desarrollo los correos llegan a Mailpit (http://localhost:8025). Detalle en el [README de notificaciones](https://github.com/SemilleroSOLID/clean-architecture-notification#el-correo-al-estudiante). El endpoint de prueba `POST /convocation/sendNotification`, que publicaba texto libre, se eliminó.
 
+## Seguridad: login con JWT y roles
+
+Desde [#22](https://github.com/SemilleroSOLID/clean-architecture-api/issues/22) todos los endpoints, salvo el login y `/test/hello`, piden un token. Hay dos roles: **ADMIN** gestiona convocatorias, estudiantes y todas las solicitudes; **STUDENT** ve las convocatorias y crea, ve y retira **solo sus** solicitudes.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Usuario
+    participant Auth as AuthController<br/>(Api)
+    participant Svc as AuthService<br/>(Application)
+    participant Hash as BCryptPasswordHasher<br/>(Infrastructure)
+    participant Tok as JwtTokenProvider<br/>(Infrastructure)
+    participant F as JwtAuthenticationFilter<br/>(Api)
+    participant Ctrl as RequestController<br/>(Api)
+
+    U->>Auth: POST /auth/login { email, password }
+    Auth->>Svc: login(dto)
+    Svc->>Hash: matches(password, hash guardado)
+    alt correo inexistente o contraseña incorrecta
+        Svc-->>U: 401 "Correo o contraseña incorrectos"
+    else credenciales correctas
+        Svc->>Tok: issue(usuario)
+        Svc-->>U: 200 { token, rol, studentId, nombre, expiresAt }
+    end
+    U->>F: GET /request/getMyRequests<br/>Authorization: Bearer token
+    F->>Tok: read(token)
+    Note over F: Token válido: el usuario y su rol<br/>quedan en la petición. Si no, 401.
+    F->>Ctrl: getMyRequests(usuario)
+    Note over Ctrl: El studentId sale del token,<br/>nunca del cuerpo de la petición
+```
+
+| Pieza | Capa | Qué hace |
+|---|---|---|
+| `User`, `EnumRole`, `IUserRepository` | Domain | El usuario con su rol y, si es estudiante, el `Student` al que corresponde. |
+| `AuthService`, `IPasswordHasher`, `ITokenProvider`, `AuthenticatedUserDto` | Application | El login y los puertos para cifrar contraseñas y emitir tokens, sin saber que son BCrypt y JWT. |
+| `BCryptPasswordHasher`, `JwtTokenProvider`, `UserRepository` | Infrastructure | BCrypt, JWT firmado con HS256 (librería jjwt) y la tabla `Users`. |
+| `SecurityConfig`, `JwtAuthenticationFilter`, `AuthController` | Api | Quién puede llamar cada endpoint, leer el token de cada petición y el login. |
+
+Decisiones:
+
+- **Contraseñas con BCrypt**, con sal propia por usuario; en la tabla `Users` solo está el hash.
+- **El login no revela si un correo existe:** el mismo 401 y el mismo mensaje para un correo inexistente y para una contraseña incorrecta. Con un correo inexistente también se verifica un hash, para que la respuesta tarde lo mismo.
+- **El estudiante sale del token.** `createRequest` y `cancelRequest` ya no reciben `studentId`: si alguien lo manda en el cuerpo, se ignora.
+- **Un estudiante no ve solicitudes de otro:** el detalle y el historial ajenos responden 403 (lo revisa `RequestService`, porque depende del dueño de cada solicitud).
+- **Sin sesión en el servidor:** cada petición trae su token; por eso no hay cookie ni protección CSRF. El token dura 8 horas (`JWT_EXPIRATION_MINUTES`).
+- **401 y 403 con el mismo formato** `CustomResponse` que el resto de errores. Un token vencido o alterado responde *"La sesión no es válida o venció"*, para que el front ([#23](https://github.com/SemilleroSOLID/clean-architecture-api/issues/23)) vuelva al login.
+
+Usuarios de desarrollo (los crea `create-database.sql`):
+
+| Correo | Contraseña | Rol |
+|---|---|---|
+| `admin@ucaldas.test` | `Admin2026*` | ADMIN |
+| `laura.gomez@ucaldas.test`, `andres.torres@ucaldas.test`, `valentina.herrera@ucaldas.test`, `santiago.ramirez@ucaldas.test`, `camila.ospina@ucaldas.test` | `Estudiante2026*` | STUDENT |
+
 ## Patrones de diseño
 
 | Patrón | Dónde | Para qué |
@@ -465,6 +523,7 @@ El consumidor de Node envía el correo al estudiante con una plantilla por estad
 | **Simple Factory** | `ConvocationStates.of(enum)` | Obtener el objeto de estado a partir del enum guardado. |
 | **Dependency Injection** | Todo el backend | Spring entrega las implementaciones de las interfaces. |
 | **Publish / Subscribe** | RabbitMQ + notificaciones | Desacoplar el envío de notificaciones del backend. |
+| **Chain of Responsibility** | Filtros de Spring Security + `JwtAuthenticationFilter` | Cada filtro revisa la petición y la pasa al siguiente; el del JWT pone el usuario antes de las reglas de acceso. |
 
 ## Estructura de carpetas
 
@@ -518,47 +577,54 @@ Antes de subir el cambio se corren las tres búsquedas de [la regla de dependenc
 
 Base: `http://localhost:3001/ms-logica-negocio/api`. Todas las respuestas tienen la forma `{ "data": ..., "codeState": ..., "message": "..." }`.
 
+Salvo `/auth/login` y `/test/hello`, todos piden `Authorization: Bearer <token>`. La columna **Rol** dice quién puede llamarlo: *Ambos* significa cualquier usuario con sesión.
+
 <details open>
 <summary><b>Convocatorias</b></summary>
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| GET | `/convocation/getAllConvocations` | Lista todas con su estado actual. |
-| GET | `/convocation/getConvocationById/{id}` | Detalle con requisitos. |
-| GET | `/convocation/getAllConvocationTypes` | Tipos de convocatoria. |
-| POST | `/convocation/createConvocation` | Crea una convocatoria (queda `OPEN`). |
-| PUT | `/convocation/updateConvocation/{id}` | Edita una abierta. |
-| DELETE | `/convocation/deleteConvocation/{id}` | Elimina una abierta sin solicitudes. |
-| PUT | `/convocation/closeConvocation/{id}` | Cierra. |
-| PUT | `/convocation/reopenConvocation/{id}` | Reabre. Cuerpo: `{ "endDate": "AAAA-MM-DD" }`. |
-| PUT | `/convocation/finishConvocation/{id}` | Finaliza. |
-| PUT | `/convocation/cancelConvocation/{id}` | Cancela. Cuerpo: `{ "reason": "..." }`. |
+| Método | Ruta | Rol | Qué hace |
+|---|---|---|---|
+| GET | `/convocation/getAllConvocations` | Ambos | Lista todas con su estado actual. |
+| GET | `/convocation/getConvocationById/{id}` | Ambos | Detalle con requisitos. |
+| GET | `/convocation/getAllConvocationTypes` | Ambos | Tipos de convocatoria. |
+| POST | `/convocation/createConvocation` | ADMIN | Crea una convocatoria (queda `OPEN`). |
+| PUT | `/convocation/updateConvocation/{id}` | ADMIN | Edita una abierta. |
+| DELETE | `/convocation/deleteConvocation/{id}` | ADMIN | Elimina una abierta sin solicitudes. |
+| PUT | `/convocation/closeConvocation/{id}` | ADMIN | Cierra. |
+| PUT | `/convocation/reopenConvocation/{id}` | ADMIN | Reabre. Cuerpo: `{ "endDate": "AAAA-MM-DD" }`. |
+| PUT | `/convocation/finishConvocation/{id}` | ADMIN | Finaliza. |
+| PUT | `/convocation/cancelConvocation/{id}` | ADMIN | Cancela. Cuerpo: `{ "reason": "..." }`. |
 
 </details>
 
 <details open>
-<summary><b>Requisitos, estudiantes y solicitudes</b></summary>
+<summary><b>Sesión, requisitos, estudiantes y solicitudes</b></summary>
 
-| Método | Ruta | Qué hace |
-|---|---|---|
-| GET | `/requirements/getAllRequirements` | Catálogo de tipos de requisito. |
-| GET | `/requirements/getAllConditionRequirements` | Condiciones (igual, mayor o igual...). |
-| GET | `/student/getAllStudents` | Lista de estudiantes. |
-| GET | `/student/getStudentById/{id}` | Detalle de un estudiante. |
-| POST | `/request/createRequest` | Crea la solicitud de un estudiante y verifica sus requisitos: queda `ACTIVE` si los cumple todos o `PENDING` si no, con la lista de los que no cumple. |
-| GET | `/request/getAllRequests?convocationId=&state=` | Lista las solicitudes, de la más reciente a la más antigua. Los dos filtros son opcionales. |
-| GET | `/request/getRequestById/{id}` | Detalle con el estudiante, la convocatoria y, por cada requisito, el valor exigido, el valor del estudiante y si lo cumple. |
-| GET | `/request/getRequestsByStudent/{studentId}` | Historial de un estudiante: sus solicitudes con título, tipo, fechas y estado de la convocatoria, el estado de la solicitud y la justificación si fue rechazada. |
-| PUT | `/request/cancelRequest/{id}` | El estudiante retira su solicitud en revisión. Cuerpo: `{ "studentId": ... }`. Queda `CANCELLED`; 403 si no es el dueño. |
-| PUT | `/request/approveRequest/{id}` | Aprueba una solicitud sin decidir (`PENDING` o `ACTIVE`) de una convocatoria cerrada: queda `ACCEPT`. |
-| PUT | `/request/rejectRequest/{id}` | La rechaza con justificación obligatoria. Cuerpo: `{ "comment": "..." }`. Queda `REJECT` y la justificación se guarda para el estudiante. |
-| GET | `/test/hello` | Comprueba que el servidor responde. |
+| Método | Ruta | Rol | Qué hace |
+|---|---|---|---|
+| POST | `/auth/login` | Público | Cuerpo: `{ "email": "...", "password": "..." }`. Devuelve el token, su vencimiento, el rol, el nombre y el `studentId`. 401 si las credenciales no son válidas. |
+| GET | `/auth/me` | Ambos | El usuario del token (sin el token). |
+| GET | `/requirements/getAllRequirements` | Ambos | Catálogo de tipos de requisito. |
+| GET | `/requirements/getAllConditionRequirements` | Ambos | Condiciones (igual, mayor o igual...). |
+| GET | `/student/getAllStudents` | ADMIN | Lista de estudiantes. |
+| GET | `/student/getStudentById/{id}` | ADMIN | Detalle de un estudiante. |
+| POST | `/request/createRequest` | STUDENT | Crea la solicitud del estudiante del token y verifica sus requisitos: queda `ACTIVE` si los cumple todos o `PENDING` si no, con la lista de los que no cumple. |
+| GET | `/request/getMyRequests` | STUDENT | Historial del estudiante del token. |
+| GET | `/request/getAllRequests?convocationId=&state=` | ADMIN | Lista las solicitudes, de la más reciente a la más antigua. Los dos filtros son opcionales. |
+| GET | `/request/getRequestById/{id}` | Ambos | Detalle con el estudiante, la convocatoria y, por cada requisito, el valor exigido, el valor del estudiante y si lo cumple. Un estudiante solo ve las suyas (403). |
+| GET | `/request/getRequestsByStudent/{studentId}` | Ambos | Historial de un estudiante: sus solicitudes con título, tipo, fechas y estado de la convocatoria, el estado de la solicitud y la justificación si fue rechazada. Un estudiante solo el suyo (403). |
+| PUT | `/request/cancelRequest/{id}` | STUDENT | El estudiante del token retira su solicitud en revisión. Queda `CANCELLED`; 403 si no es el dueño. |
+| PUT | `/request/approveRequest/{id}` | ADMIN | Aprueba una solicitud sin decidir (`PENDING` o `ACTIVE`) de una convocatoria cerrada: queda `ACCEPT`. |
+| PUT | `/request/rejectRequest/{id}` | ADMIN | La rechaza con justificación obligatoria. Cuerpo: `{ "comment": "..." }`. Queda `REJECT` y la justificación se guarda para el estudiante. |
+| GET | `/test/hello` | Público | Comprueba que el servidor responde. |
 
 </details>
 
 | Código | Cuándo |
 |---|---|
 | `400` | Datos inválidos o acción no permitida en el estado actual. El cuerpo trae un mapa `campo → mensaje`. |
+| `401` | Sin token, token vencido o alterado, o login con credenciales incorrectas. |
+| `403` | El rol no puede usar ese endpoint, o la solicitud es de otro estudiante. |
 | `404` | La convocatoria, la solicitud, el estudiante o el recurso no existe. |
 | `409` | Conflicto, por ejemplo una solicitud repetida o eliminar una convocatoria con solicitudes. |
 
@@ -615,6 +681,8 @@ El contenedor `sqlserver` ejecuta `create-database.sql` al iniciar: crea `CleanA
 | `DB_PORT` | `1433` |
 | `RABBITMQ_HOST` | `localhost` |
 | `RABBITMQ_PORT` | `5673` |
+| `JWT_SECRET` | Una clave de desarrollo. **En cualquier otro entorno se debe definir** (Base64, mínimo 32 bytes): con ella se firman los tokens. |
+| `JWT_EXPIRATION_MINUTES` | `480` (8 horas) |
 
 Dentro de Docker Compose el backend usa `sqlserver:1433` y llega a RabbitMQ por `host.docker.internal:5673`. La zona horaria de las reglas es `America/Bogota` (propiedad `app.time-zone`).
 
@@ -633,8 +701,11 @@ Dentro de Docker Compose el backend usa `sqlserver:1433` y llega a RabbitMQ por 
 | `RequestDecisionTest` | 6 | Aprobar y rechazar: justificación obligatoria, no decidir dos veces y solo con la convocatoria cerrada. |
 | `RequestStateTest` | 6 | El patrón State de la solicitud: qué permite cada estado y el retiro por el estudiante. |
 | `RabbitMQSenderTest` | 3 | Que el evento se publique en el exchange, que espere al commit y que con RabbitMQ caído la operación no falle. |
+| `AuthServiceTest` | 3 | Login correcto, el mismo mensaje para contraseña incorrecta y correo inexistente (y que ambos verifiquen un hash), y el administrador sin estudiante. |
+| `JwtTokenProviderTest` | 4 | Que el token lleve el usuario y venza a las 8 horas, y que se rechace uno vencido, alterado o firmado con otra clave. |
+| `RequestAccessTest` | 2 | Que un estudiante no vea el historial ni el detalle de solicitudes de otro. |
 
-Las pruebas del dominio crean los objetos con `new`, sin Spring ni base de datos; la del publicador usa un `RabbitTemplate` simulado con Mockito. Que se pueda probar así es una de las señales más claras de que el dominio está bien aislado.
+Las pruebas del dominio crean los objetos con `new`, sin Spring ni base de datos; las de los servicios y el publicador usan repositorios y un `RabbitTemplate` simulados con Mockito. Que se pueda probar así es una de las señales más claras de que el dominio está bien aislado.
 
 ## Diagramas
 
@@ -655,15 +726,15 @@ El trabajo se organiza en [issues](https://github.com/SemilleroSOLID/clean-archi
 | 1 · Convocatorias (CU-001) | Crear, consultar, editar, eliminar y listar; validaciones; refactor a Clean Architecture; diagrama de estados. | ✅ Terminada |
 | 2 · Solicitudes (CU-002) | Estudiantes, creación de solicitudes, verificación automática de requisitos y formulario de postulación en el front. | ✅ Terminada |
 | 3 · Gestión y notificaciones | Ver, aprobar y rechazar solicitudes, historial y retiro del estudiante, eventos en RabbitMQ y correo real al estudiante. | ✅ Terminada |
-| 4 · Autenticación y roles | JWT con roles Administrador y Estudiante, login y rutas protegidas. | ⏳ Pendiente |
+| 4 · Autenticación y roles | JWT con roles Administrador y Estudiante en el backend listo. Falta el login y las rutas protegidas en el front ([#23](https://github.com/SemilleroSOLID/clean-architecture-api/issues/23)). | 🔄 En curso |
 | 5 · Calidad y despliegue | Patrón State listo. Faltan pruebas con Mockito, pruebas de integración, GitHub Actions, Docker Compose único y diagramas de despliegue y entidad-relación. | 🔄 En curso |
 
 Al terminar el backlog la estructura de capas será la misma; crece el contenido de cada una:
 
 - **Domain:** ya tiene la verificación de requisitos y los estados de la solicitud con el patrón State.
-- **Application:** ya publica un evento en cada cambio de estado de una solicitud; faltan los casos de uso de autenticación.
-- **Infrastructure:** la parte técnica del JWT.
-- **Api:** endpoints nuevos protegidos por rol. El dominio no sabrá quién está autenticado: recibe el id del usuario como un dato más.
+- **Application:** ya publica un evento en cada cambio de estado de una solicitud y tiene el login.
+- **Infrastructure:** ya tiene BCrypt y JWT.
+- **Api:** los endpoints ya están protegidos por rol. El dominio no sabe quién está autenticado: recibe el id del estudiante como un dato más.
 
 ---
 

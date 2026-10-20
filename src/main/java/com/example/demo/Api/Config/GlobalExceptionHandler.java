@@ -4,6 +4,7 @@ import com.example.demo.Api.Dtos.CustomResponse;
 import com.example.demo.Application.Exceptions.ConflictException;
 import com.example.demo.Application.Exceptions.ForbiddenException;
 import com.example.demo.Application.Exceptions.NotFoundException;
+import com.example.demo.Application.Exceptions.UnauthorizedException;
 import com.example.demo.Domain.Exceptions.DomainValidationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<CustomResponse<Object>> handleNotFound(NotFoundException exception) {
         CustomResponse<Object> response = new CustomResponse<>(null, HttpStatus.NOT_FOUND.value(), exception.getMessage());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<CustomResponse<Object>> handleUnauthorized(UnauthorizedException exception) {
+        CustomResponse<Object> response = new CustomResponse<>(null, HttpStatus.UNAUTHORIZED.value(), exception.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
 
     @ExceptionHandler(ForbiddenException.class)

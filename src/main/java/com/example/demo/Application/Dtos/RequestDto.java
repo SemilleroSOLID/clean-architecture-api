@@ -12,7 +12,7 @@ import java.util.List;
 
 public class RequestDto implements Serializable {
     private int id;
-    @Positive(message = "El estudiante es obligatorio")
+    // Taken from the token of the student (issue #22), never from the body.
     private int studentId;
     @Positive(message = "La convocatoria es obligatoria")
     private int convocationId;

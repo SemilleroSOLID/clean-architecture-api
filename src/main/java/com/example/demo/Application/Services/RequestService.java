@@ -1,5 +1,6 @@
 package com.example.demo.Application.Services;
 
+import com.example.demo.Application.Dtos.AuthenticatedUserDto;
 import com.example.demo.Application.Dtos.RequestDetailDto;
 import com.example.demo.Application.Dtos.RequestDto;
 import com.example.demo.Application.Dtos.RequestSummaryDto;
@@ -33,6 +34,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,7 +60,8 @@ public class RequestService implements IRequestService {
 
     @Override
     @Transactional
-    public RequestDto createRequest(RequestDto requestDto) {
+    public RequestDto createRequest(RequestDto requestDto, int studentId) {
+        requestDto.setStudentId(studentId);
         LocalDate today = LocalDate.now(this.clock);
         Student student = this.findStudent(requestDto.getStudentId());
         Convocation convocation = this.convocationRepository.findById(requestDto.getConvocationId())
@@ -112,13 +115,15 @@ public class RequestService implements IRequestService {
     }
 
     @Override
-    public RequestDetailDto getRequestById(int requestId) {
+    public RequestDetailDto getRequestById(int requestId, AuthenticatedUserDto viewer) {
         Request request = this.findRequest(requestId);
+        this.ensureCanSee(request.getStudentId(), viewer);
         return this.toDetailDto(request, this.findStudent(request.getStudentId()), this.findConvocationOf(request));
     }
 
     @Override
-    public List<StudentRequestDto> getRequestsByStudent(int studentId) {
+    public List<StudentRequestDto> getRequestsByStudent(int studentId, AuthenticatedUserDto viewer) {
+        this.ensureCanSee(studentId, viewer);
         if (!this.studentRepository.existsById(studentId)) {
             throw new NotFoundException("No existe un estudiante con id " + studentId);
         }
@@ -128,6 +133,13 @@ public class RequestService implements IRequestService {
                 .map(request -> this.requestMapper.toStudentRequestDto(request,
                         convocations.computeIfAbsent(request.getConvocationId(), id -> this.findConvocation(id, today))))
                 .toList();
+    }
+
+    // The administrator sees every request; a student only his own (issue #22).
+    private void ensureCanSee(int studentId, AuthenticatedUserDto viewer) {
+        if (!viewer.isAdmin() && !Objects.equals(viewer.getStudentId(), studentId)) {
+            throw new ForbiddenException("Solo puedes ver tus propias solicitudes");
+        }
     }
 
     private Convocation findConvocation(int convocationId, LocalDate today) {
