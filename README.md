@@ -743,7 +743,7 @@ Las pruebas del dominio crean los objetos con `new`, sin Spring ni base de datos
 
 ### Cómo escribir una prueba de servicio
 
-Las pruebas de los servicios se escriben **una clase por servicio**. Como ejemplo está hecha la de `StudentService`. Las de los demás servicios están pendientes en issues abiertas y sin asignar: cualquiera puede tomar una, hacer un fork, levantar el sistema con Docker y escribirlas siguiendo ese modelo (cada issue explica los pasos):
+Las pruebas de los servicios se escriben **una clase por servicio**. Como ejemplo está hecha la de `StudentService`. Las de los demás servicios están pendientes en issues abiertas y sin asignar. Varias personas pueden trabajarlas a la vez, cada una en su propio fork (incluso las cuatro en el mismo fork): se levanta el sistema con Docker y se escriben las pruebas siguiendo ese modelo. Cada issue explica los pasos:
 
 | Issue | Servicio | Cobertura hoy |
 |---|---|:-:|
