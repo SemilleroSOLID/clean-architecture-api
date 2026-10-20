@@ -8,12 +8,16 @@ import com.example.demo.Application.Dtos.RequirementCheckDto;
 import com.example.demo.Application.Dtos.StudentDto;
 import com.example.demo.Application.Dtos.StudentRequestDto;
 import com.example.demo.Application.Dtos.UnmetRequirementDto;
+import com.example.demo.Application.Events.RequestStatusChangedEvent;
 import com.example.demo.Domain.Entities.Convocation;
 import com.example.demo.Domain.Entities.ConvocationRequirement;
 import com.example.demo.Domain.Entities.Request;
 import com.example.demo.Domain.Entities.RequestRequirement;
+import com.example.demo.Domain.Entities.Student;
+import com.example.demo.Domain.Enums.EnumStateRequest;
 import org.springframework.stereotype.Component;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -111,6 +115,23 @@ public class RequestMapper {
         studentRequest.setConvocationEndDate(convocation.getEndDate());
         studentRequest.setConvocationState(convocation.getState());
         return studentRequest;
+    }
+
+    /** previousState is null when the request was just created. */
+    public RequestStatusChangedEvent toStatusChangedEvent(Request request, Student student, Convocation convocation,
+                                                          EnumStateRequest previousState, OffsetDateTime date) {
+        RequestStatusChangedEvent event = new RequestStatusChangedEvent();
+        event.setRequestId(request.getId());
+        event.setStudentId(student.getId());
+        event.setStudentName(student.getName());
+        event.setStudentEmail(student.getEmail());
+        event.setConvocationId(convocation.getId());
+        event.setConvocationTitle(convocation.getTitle());
+        event.setPreviousState(previousState);
+        event.setNewState(request.getState());
+        event.setComment(request.getComment());
+        event.setDate(date.toString());
+        return event;
     }
 
     private RequestRequirementDto toDto(RequestRequirement requestRequirement) {

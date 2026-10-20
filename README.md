@@ -48,14 +48,15 @@ Este repositorio es el **backend** y también la **documentación principal** de
 5. [Cómo se cumple la regla de dependencias](#cómo-se-cumple-la-regla-de-dependencias)
 6. [Ciclo de vida de una convocatoria](#ciclo-de-vida-de-una-convocatoria)
 7. [Recorrido de una petición](#recorrido-de-una-petición)
-8. [Patrones de diseño](#patrones-de-diseño)
-9. [Estructura de carpetas](#estructura-de-carpetas)
-10. [Cómo agregar una funcionalidad](#cómo-agregar-una-funcionalidad)
-11. [Endpoints](#endpoints)
-12. [Cómo ejecutar todo el sistema](#cómo-ejecutar-todo-el-sistema)
-13. [Pruebas](#pruebas)
-14. [Diagramas](#diagramas)
-15. [Estado del proyecto](#estado-del-proyecto)
+8. [Eventos de notificación](#eventos-de-notificación)
+9. [Patrones de diseño](#patrones-de-diseño)
+10. [Estructura de carpetas](#estructura-de-carpetas)
+11. [Cómo agregar una funcionalidad](#cómo-agregar-una-funcionalidad)
+12. [Endpoints](#endpoints)
+13. [Cómo ejecutar todo el sistema](#cómo-ejecutar-todo-el-sistema)
+14. [Pruebas](#pruebas)
+15. [Diagramas](#diagramas)
+16. [Estado del proyecto](#estado-del-proyecto)
 
 ## Visión general
 
@@ -185,8 +186,9 @@ Coordina. Un servicio carga lo que necesita mediante las interfaces del dominio,
 | Servicios | `ConvocationService.closeConvocation(id)`: carga, llama a `convocation.close()`, guarda. |
 | DTOs | `ConvocationDto`, `RequestDto`. Contrato con el front, con las anotaciones de Bean Validation. |
 | Mappers DTO ↔ dominio | `ConvocationMapper`, `RequestMapper`, `StudentMapper`. |
-| Excepciones de aplicación | `NotFoundException`, `ConflictException`. |
-| Puertos de salida | `IRabbitMQSender`: el servicio sabe que puede enviar un mensaje, no que es RabbitMQ. |
+| Excepciones de aplicación | `NotFoundException`, `ConflictException`, `ForbiddenException`. |
+| Eventos | `RequestStatusChangedEvent`: el mensaje que se publica en cada cambio de estado de una solicitud. |
+| Puertos de salida | `IRabbitMQSender`: el servicio sabe que puede publicar un evento, no que es RabbitMQ. |
 
 ### Infrastructure · los detalles técnicos
 
@@ -407,6 +409,50 @@ Ejemplo: el administrador cierra la convocatoria 5 con `PUT /convocation/closeCo
 
 Los recorridos completos, con los casos de error, están en [diagramas/diagrama-secuencia.md](diagramas/diagrama-secuencia.md).
 
+## Eventos de notificación
+
+Desde [#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20), cada vez que una solicitud se crea o cambia de estado el backend publica un evento en RabbitMQ para que el microservicio de notificaciones le avise al estudiante. El backend no envía correos: publica y responde.
+
+| Acción | Endpoint | `previousState` → `newState` |
+|---|---|---|
+| El estudiante se postula | `POST /request/createRequest` | `null` → `ACTIVE` o `PENDING` |
+| El administrador aprueba | `PUT /request/approveRequest/{id}` | `ACTIVE` o `PENDING` → `ACCEPT` |
+| El administrador rechaza | `PUT /request/rejectRequest/{id}` | `ACTIVE` o `PENDING` → `REJECT` (con `comment`) |
+| El estudiante la retira | `PUT /request/cancelRequest/{id}` | `ACTIVE` o `PENDING` → `CANCELLED` |
+
+El mensaje sale al exchange `event.drivent.exchange` con la routing key `email` y llega a la cola `event.drivent.email`. Es JSON (`content_type: application/json`) y es el contrato con el consumidor: se pueden agregar campos, no renombrarlos.
+
+```json
+{
+  "event": "REQUEST_STATUS_CHANGED",
+  "requestId": 9,
+  "studentId": 4,
+  "studentName": "Santiago Ramírez López",
+  "studentEmail": "santiago.ramirez@ucaldas.test",
+  "convocationId": 3,
+  "convocationTitle": "Residencia Estudiantil 2027",
+  "previousState": "PENDING",
+  "newState": "REJECT",
+  "comment": "El promedio mínimo para la residencia es 3.5",
+  "date": "2026-10-19T23:00:06-05:00"
+}
+```
+
+Cómo está repartido entre las capas:
+
+| Capa | Pieza | Qué hace |
+|---|---|---|
+| Application | `RequestStatusChangedEvent` | El mensaje. `RequestMapper.toStatusChangedEvent(...)` lo arma con la solicitud, el estudiante y la convocatoria. |
+| Application | `IRabbitMQSender.publishRequestStatusChanged(event)` | El puerto. `RequestService` lo llama después de cada cambio, sin saber que existe RabbitMQ. |
+| Infrastructure | `RabbitMQSender` | Lo publica con `RabbitTemplate` y `Jackson2JsonMessageConverter` (configurado en `RabbitMQService`). |
+
+Dos reglas del publicador:
+
+- **Solo después del commit.** Dentro de una transacción, el evento se registra para `afterCommit`: si guardar falla, el estudiante nunca recibe un aviso de algo que no pasó. Una operación rechazada (400, 403, 404) no publica nada.
+- **RabbitMQ caído no rompe el negocio.** El cambio ya está guardado; si no se puede publicar, se registra el error en el log (`No se pudo publicar en RabbitMQ el evento ...`) y la petición responde 200. `spring.rabbitmq.connection-timeout=2s` evita que la respuesta se quede esperando. Cuando RabbitMQ vuelve, el backend se reconecta solo.
+
+El consumidor de Node hoy registra el mensaje en su log; el envío real del correo es [#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21). El endpoint de prueba `POST /convocation/sendNotification`, que publicaba texto libre, se eliminó.
+
 ## Patrones de diseño
 
 | Patrón | Dónde | Para qué |
@@ -582,9 +628,12 @@ Dentro de Docker Compose el backend usa `sqlserver:1433` y llega a RabbitMQ por 
 | `ConvocationValidationTest` | 10 | Reglas de fechas y requisitos al crear y editar. |
 | `ConvocationStateTest` | 21 | Cada transición válida e inválida de los cuatro estados, el cierre automático y la regla de no cambiar requisitos con solicitudes. |
 | `RequestValidationTest` | 6 | Que una solicitud responda todos los requisitos, sin repetidos ni ajenos. |
-| `RequirementVerificationTest` | 11 | Las 5 condiciones (cada una con un caso que cumple y otro que no), la comparación de números y de texto, y que la solicitud quede `ACTIVE` o `PENDING`, nunca `REJECT`. |
+| `RequirementVerificationTest` | 12 | Las 5 condiciones (cada una con un caso que cumple y otro que no), la comparación de números y de texto, y que la solicitud quede `ACTIVE` o `PENDING`, nunca `REJECT`. |
+| `RequestDecisionTest` | 6 | Aprobar y rechazar: justificación obligatoria, no decidir dos veces y solo con la convocatoria cerrada. |
+| `RequestStateTest` | 6 | El patrón State de la solicitud: qué permite cada estado y el retiro por el estudiante. |
+| `RabbitMQSenderTest` | 3 | Que el evento se publique en el exchange, que espere al commit y que con RabbitMQ caído la operación no falle. |
 
-Las pruebas crean los objetos con `new`, sin Spring ni base de datos. Que se pueda probar así es una de las señales más claras de que el dominio está bien aislado.
+Las pruebas del dominio crean los objetos con `new`, sin Spring ni base de datos; la del publicador usa un `RabbitTemplate` simulado con Mockito. Que se pueda probar así es una de las señales más claras de que el dominio está bien aislado.
 
 ## Diagramas
 
@@ -592,7 +641,7 @@ Las pruebas crean los objetos con `new`, sin Spring ni base de datos. Que se pue
 |---|---|
 | [Estados de la convocatoria](diagramas/estados-convocatoria.md) | Ciclo de vida, acciones por estado, decisiones del equipo y el patrón State. |
 | [Clases](diagramas/diagrama-clases.md) | Las clases de la convocatoria en las cuatro capas y el modelo de dominio. |
-| [Secuencia](diagramas/diagrama-secuencia.md) | Crear convocatoria, cambiar estado, crear solicitud y el flujo planeado de aprobar y notificar. |
+| [Secuencia](diagramas/diagrama-secuencia.md) | Crear convocatoria, cambiar estado, crear solicitud y aprobar o rechazar con la notificación por RabbitMQ. |
 
 Están escritos en [Mermaid](https://mermaid.js.org/): GitHub los dibuja directamente y se editan como texto.
 
@@ -604,15 +653,15 @@ El trabajo se organiza en [issues](https://github.com/SemilleroSOLID/clean-archi
 |---|---|---|
 | 1 · Convocatorias (CU-001) | Crear, consultar, editar, eliminar y listar; validaciones; refactor a Clean Architecture; diagrama de estados. | ✅ Terminada |
 | 2 · Solicitudes (CU-002) | Estudiantes, creación de solicitudes, verificación automática de requisitos y formulario de postulación en el front. | ✅ Terminada |
-| 3 · Gestión y notificaciones | Ver, aprobar y rechazar solicitudes, historial y retiro del estudiante, eventos en RabbitMQ, correo real. | ⏳ Pendiente |
+| 3 · Gestión y notificaciones | Ver, aprobar y rechazar solicitudes, historial y retiro del estudiante y eventos en RabbitMQ listos. Falta el correo real ([#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21)). | 🔄 En curso |
 | 4 · Autenticación y roles | JWT con roles Administrador y Estudiante, login y rutas protegidas. | ⏳ Pendiente |
 | 5 · Calidad y despliegue | Patrón State listo. Faltan pruebas con Mockito, pruebas de integración, GitHub Actions, Docker Compose único y diagramas de despliegue y entidad-relación. | 🔄 En curso |
 
 Al terminar el backlog la estructura de capas será la misma; crece el contenido de cada una:
 
-- **Domain:** verificación de requisitos y estados de la solicitud (pendiente, activa, aprobada, rechazada, retirada), probablemente con el mismo patrón State.
-- **Application:** aprobar, rechazar y retirar, y un puerto para publicar eventos de notificación.
-- **Infrastructure:** ese puerto implementado con RabbitMQ y la parte técnica del JWT.
+- **Domain:** ya tiene la verificación de requisitos y los estados de la solicitud con el patrón State.
+- **Application:** ya publica un evento en cada cambio de estado de una solicitud; faltan los casos de uso de autenticación.
+- **Infrastructure:** la parte técnica del JWT.
 - **Api:** endpoints nuevos protegidos por rol. El dominio no sabrá quién está autenticado: recibe el id del usuario como un dato más.
 
 ---

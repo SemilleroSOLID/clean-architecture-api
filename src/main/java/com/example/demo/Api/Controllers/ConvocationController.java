@@ -6,7 +6,6 @@ import com.example.demo.Application.Dtos.ConvocationTypeDto;
 import com.example.demo.Application.Dtos.ReopenConvocationDto;
 import com.example.demo.Api.Dtos.CustomResponse;
 import com.example.demo.Application.IConvocationService;
-import com.example.demo.Application.IRabbitMQSender;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -20,9 +19,6 @@ public class ConvocationController {
     @Autowired
     private IConvocationService convocationService;
 
-    @Autowired
-    private IRabbitMQSender notificationSender;
-
 
     @GetMapping("/getAllConvocations")
     public CustomResponse<List<ConvocationDto>> getAllConvocations() {
@@ -34,12 +30,6 @@ public class ConvocationController {
     public CustomResponse<ConvocationDto> getConvocationById(@PathVariable("convocationId") Integer convocationId) {
         ConvocationDto convocationDto = this.convocationService.getConvocationById(convocationId);
         return new CustomResponse<>(convocationDto, "Convocation with id " + convocationDto.getId());
-    }
-
-    @PostMapping("/sendNotification")
-    public CustomResponse<String> sendNotification(@RequestBody String message) {
-        String response = this.notificationSender.sendMessage(message);
-        return new CustomResponse<String>(response, "Mensaje enviado");
     }
 
     @GetMapping("/getAllConvocationTypes")

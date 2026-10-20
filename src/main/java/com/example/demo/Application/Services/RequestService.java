@@ -7,6 +7,7 @@ import com.example.demo.Application.Dtos.StudentRequestDto;
 import com.example.demo.Application.Exceptions.ConflictException;
 import com.example.demo.Application.Exceptions.ForbiddenException;
 import com.example.demo.Application.Exceptions.NotFoundException;
+import com.example.demo.Application.IRabbitMQSender;
 import com.example.demo.Application.IRequestService;
 import com.example.demo.Application.Mappers.RequestMapper;
 import com.example.demo.Application.Mappers.StudentMapper;
@@ -27,6 +28,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -49,15 +52,15 @@ public class RequestService implements IRequestService {
     @Autowired
     private StudentMapper studentMapper;
     @Autowired
+    private IRabbitMQSender eventSender;
+    @Autowired
     private Clock clock;
 
     @Override
     @Transactional
     public RequestDto createRequest(RequestDto requestDto) {
         LocalDate today = LocalDate.now(this.clock);
-        if (!this.studentRepository.existsById(requestDto.getStudentId())) {
-            throw new NotFoundException("No existe un estudiante con id " + requestDto.getStudentId());
-        }
+        Student student = this.findStudent(requestDto.getStudentId());
         Convocation convocation = this.convocationRepository.findById(requestDto.getConvocationId())
                 .orElseThrow(() -> new NotFoundException("No existe una convocatoria con id " + requestDto.getConvocationId()));
         convocation.applyDateRules(today);
@@ -76,6 +79,7 @@ public class RequestService implements IRequestService {
         List<RequestRequirement> requirements = request.getRequirements();
         requirements.forEach(requirement -> requirement.setRequestId(createdRequest.getId()));
         createdRequest.setRequirements(this.requestRequirementRepository.saveAll(requirements));
+        this.publishStateChange(createdRequest, student, convocation, null);
 
         RequestDto createdRequestDto = this.requestMapper.toDto(createdRequest);
         createdRequestDto.setUnmetRequirements(this.requestMapper.toUnmetDtos(unmetRequirements, createdRequest));
@@ -110,7 +114,7 @@ public class RequestService implements IRequestService {
     @Override
     public RequestDetailDto getRequestById(int requestId) {
         Request request = this.findRequest(requestId);
-        return this.toDetailDto(request, this.findConvocationOf(request));
+        return this.toDetailDto(request, this.findStudent(request.getStudentId()), this.findConvocationOf(request));
     }
 
     @Override
@@ -138,8 +142,9 @@ public class RequestService implements IRequestService {
     public RequestDetailDto approveRequest(int requestId) {
         Request request = this.findRequest(requestId);
         Convocation convocation = this.findConvocationOf(request);
+        EnumStateRequest previousState = request.getState();
         request.approve(convocation);
-        return this.toDetailDto(this.saveDecision(request), convocation);
+        return this.saveAndNotify(request, convocation, previousState);
     }
 
     @Override
@@ -147,8 +152,9 @@ public class RequestService implements IRequestService {
     public RequestDetailDto rejectRequest(int requestId, String comment) {
         Request request = this.findRequest(requestId);
         Convocation convocation = this.findConvocationOf(request);
+        EnumStateRequest previousState = request.getState();
         request.reject(convocation, comment);
-        return this.toDetailDto(this.saveDecision(request), convocation);
+        return this.saveAndNotify(request, convocation, previousState);
     }
 
     @Override
@@ -158,11 +164,28 @@ public class RequestService implements IRequestService {
         if (!request.belongsTo(studentId)) {
             throw new ForbiddenException("Solo el estudiante que hizo la solicitud puede retirarla");
         }
+        Convocation convocation = this.findConvocationOf(request);
+        EnumStateRequest previousState = request.getState();
         request.cancel();
-        return this.requestMapper.toStudentRequestDto(this.saveDecision(request), this.findConvocationOf(request));
+        Request saved = this.saveDecision(request);
+        this.publishStateChange(saved, this.findStudent(studentId), convocation, previousState);
+        return this.requestMapper.toStudentRequestDto(saved, convocation);
     }
 
-    // The notification to the student of each decision is published in #20.
+    private RequestDetailDto saveAndNotify(Request request, Convocation convocation, EnumStateRequest previousState) {
+        Request saved = this.saveDecision(request);
+        Student student = this.findStudent(saved.getStudentId());
+        this.publishStateChange(saved, student, convocation, previousState);
+        return this.toDetailDto(saved, student, convocation);
+    }
+
+    // The student is notified of every state change (#20); the event leaves once the transaction is committed.
+    private void publishStateChange(Request request, Student student, Convocation convocation, EnumStateRequest previousState) {
+        OffsetDateTime now = OffsetDateTime.now(this.clock).truncatedTo(ChronoUnit.SECONDS);
+        this.eventSender.publishRequestStatusChanged(
+                this.requestMapper.toStatusChangedEvent(request, student, convocation, previousState, now));
+    }
+
     private Request saveDecision(Request request) {
         Request saved = this.requestRepository.save(request);
         saved.setRequirements(request.getRequirements());
@@ -181,9 +204,12 @@ public class RequestService implements IRequestService {
         return this.findConvocation(request.getConvocationId(), LocalDate.now(this.clock));
     }
 
-    private RequestDetailDto toDetailDto(Request request, Convocation convocation) {
-        Student student = this.studentRepository.findById(request.getStudentId())
-                .orElseThrow(() -> new NotFoundException("No existe un estudiante con id " + request.getStudentId()));
+    private Student findStudent(int studentId) {
+        return this.studentRepository.findById(studentId)
+                .orElseThrow(() -> new NotFoundException("No existe un estudiante con id " + studentId));
+    }
+
+    private RequestDetailDto toDetailDto(Request request, Student student, Convocation convocation) {
         List<ConvocationRequirement> convocationRequirements = this.convocationRequirementRepository.findConvocationRequirements(convocation.getId());
         return this.requestMapper.toDetailDto(request, this.studentMapper.toDto(student), convocation,
                 convocationRequirements, request.unmetRequirements(convocationRequirements));

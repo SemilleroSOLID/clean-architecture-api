@@ -7,7 +7,7 @@ Los participantes tienen el nombre de la clase real y la capa a la que pertenece
 1. [Crear una convocatoria](#1-crear-una-convocatoria-cu-001) (CU-001)
 2. [Cambiar el estado de una convocatoria](#2-cambiar-el-estado-de-una-convocatoria-patrón-state) (patrón State)
 3. [Crear una solicitud](#3-crear-una-solicitud-cu-002) (CU-002)
-4. [Aprobar una solicitud y notificar al estudiante](#4-aprobar-una-solicitud-y-notificar-planeado) (planeado)
+4. [Aprobar una solicitud y notificar al estudiante](#4-aprobar-una-solicitud-y-notificar-al-estudiante) (eventos)
 
 ## 1. Crear una convocatoria (CU-001)
 
@@ -156,9 +156,9 @@ sequenceDiagram
 
 Las flechas que terminan en una excepción cortan el flujo: no se ejecuta nada de lo que sigue. Como todas las comprobaciones van antes del primer `INSERT`, una solicitud inválida nunca llega a la base de datos, y si algo falla al guardar los requisitos, `@Transactional` deshace también la solicitud.
 
-## 4. Aprobar una solicitud y notificar (en parte planeado)
+## 4. Aprobar una solicitud y notificar al estudiante
 
-Aprobar y rechazar ya está implementado ([#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17)): `PUT /request/approveRequest/{id}` y `PUT /request/rejectRequest/{id}`, con la regla de la convocatoria cerrada resuelta por su patrón State (`ensureCanDecideRequests`). Falta publicar el evento ([#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20)) y enviar el correo ([#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21)). Lo nuevo es la comunicación por eventos: el backend no envía el correo, publica un mensaje en RabbitMQ y el microservicio de notificaciones lo procesa por su cuenta.
+Aprobar y rechazar ya está implementado ([#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17)): `PUT /request/approveRequest/{id}` y `PUT /request/rejectRequest/{id}`, con la regla de la convocatoria cerrada resuelta por su patrón State (`ensureCanDecideRequests`). Desde [#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20) cada cambio publica el evento `REQUEST_STATUS_CHANGED` (también al crear y al retirar); falta enviar el correo real ([#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21)). Lo nuevo es la comunicación por eventos: el backend no envía el correo, publica un mensaje en RabbitMQ y el microservicio de notificaciones lo procesa por su cuenta.
 
 ```mermaid
 sequenceDiagram
@@ -178,13 +178,15 @@ sequenceDiagram
     Svc->>Req: approve(convocation) / reject(convocation, comment)
     Note over Req: Solo si la solicitud no está decidida<br/>y la convocatoria está cerrada (ensureCanDecideRequests)
     Svc->>Repo: save(request)
-    Svc->>Pub: publicar evento "solicitud decidida"
+    Svc->>Pub: publishRequestStatusChanged(evento JSON)
     Note over Svc,Pub: Svc solo conoce la interfaz de Application,<br/>RabbitMQ es un detalle de Infrastructure
+    Note over Pub: Se registra para después del commit
+    Svc-->>Ctrl: RequestDetailDto
+    Note over Svc,Repo: commit de la transacción
     Pub->>MQ: exchange event.drivent.exchange<br/>routing key "email"
-    Svc-->>Ctrl: RequestDto
     Ctrl-->>Admin: 200
     MQ-)Cons: mensaje en la cola event.drivent.email
-    Cons-)Est: correo con la decisión
+    Cons-)Est: correo con la decisión (#21)
 ```
 
-El administrador recibe la respuesta sin esperar a que salga el correo. Si el servicio de notificaciones está caído, el mensaje queda en la cola y se envía cuando vuelva.
+El administrador recibe la respuesta sin esperar a que salga el correo. Si el servicio de notificaciones está caído, el mensaje queda en la cola y se envía cuando vuelva. Si el caído es RabbitMQ, la decisión se guarda igual y el backend registra en el log el evento que no pudo publicar. El mensaje completo está en el [README](../README.md#eventos-de-notificación).
