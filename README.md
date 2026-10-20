@@ -480,6 +480,7 @@ Base: `http://localhost:3001/ms-logica-negocio/api`. Todas las respuestas tienen
 | POST | `/request/createRequest` | Crea la solicitud de un estudiante y verifica sus requisitos: queda `ACTIVE` si los cumple todos o `PENDING` si no, con la lista de los que no cumple. |
 | GET | `/request/getAllRequests?convocationId=&state=` | Lista las solicitudes, de la más reciente a la más antigua. Los dos filtros son opcionales. |
 | GET | `/request/getRequestById/{id}` | Detalle con el estudiante, la convocatoria y, por cada requisito, el valor exigido, el valor del estudiante y si lo cumple. |
+| GET | `/request/getRequestsByStudent/{studentId}` | Historial de un estudiante: sus solicitudes con título, tipo, fechas y estado de la convocatoria, el estado de la solicitud y la justificación si fue rechazada. |
 | PUT | `/request/approveRequest/{id}` | Aprueba una solicitud sin decidir (`PENDING` o `ACTIVE`) de una convocatoria cerrada: queda `ACCEPT`. |
 | PUT | `/request/rejectRequest/{id}` | La rechaza con justificación obligatoria. Cuerpo: `{ "comment": "..." }`. Queda `REJECT` y la justificación se guarda para el estudiante. |
 | GET | `/test/hello` | Comprueba que el servidor responde. |

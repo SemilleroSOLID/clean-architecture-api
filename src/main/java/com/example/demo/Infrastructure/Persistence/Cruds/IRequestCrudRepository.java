@@ -13,6 +13,8 @@ public interface IRequestCrudRepository extends CrudRepository<RequestEntity, In
     boolean existsByConvocationIdAndRequestStateIn(Integer convocationId, Collection<Integer> requestStates);
     boolean existsByStudentIdAndConvocationId(Integer studentId, Integer convocationId);
 
+    List<RequestEntity> findByStudentIdOrderByCreationDateDescIdDesc(Integer studentId);
+
     @Query("SELECT r FROM RequestEntity r"
             + " WHERE (:convocationId IS NULL OR r.convocationId = :convocationId)"
             + " AND (:requestState IS NULL OR r.requestState = :requestState)"

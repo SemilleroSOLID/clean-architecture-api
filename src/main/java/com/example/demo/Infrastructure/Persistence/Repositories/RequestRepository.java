@@ -30,6 +30,13 @@ public class RequestRepository implements IRequestRepository {
     }
 
     @Override
+    public List<Request> findByStudentId(int studentId) {
+        return this.requestCrudRepository.findByStudentIdOrderByCreationDateDescIdDesc(studentId).stream()
+                .map(this.requestPersistenceMapper::toDomain)
+                .toList();
+    }
+
+    @Override
     public List<Request> findAll(Integer convocationId, EnumStateRequest state) {
         return this.requestCrudRepository.findByFilters(convocationId, state == null ? null : state.getValue()).stream()
                 .map(this.requestPersistenceMapper::toDomain)

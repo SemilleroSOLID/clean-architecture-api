@@ -3,6 +3,7 @@ package com.example.demo.Application.Services;
 import com.example.demo.Application.Dtos.RequestDetailDto;
 import com.example.demo.Application.Dtos.RequestDto;
 import com.example.demo.Application.Dtos.RequestSummaryDto;
+import com.example.demo.Application.Dtos.StudentRequestDto;
 import com.example.demo.Application.Exceptions.ConflictException;
 import com.example.demo.Application.Exceptions.NotFoundException;
 import com.example.demo.Application.IRequestService;
@@ -112,6 +113,26 @@ public class RequestService implements IRequestService {
     }
 
     @Override
+    public List<StudentRequestDto> getRequestsByStudent(int studentId) {
+        if (!this.studentRepository.existsById(studentId)) {
+            throw new NotFoundException("No existe un estudiante con id " + studentId);
+        }
+        LocalDate today = LocalDate.now(this.clock);
+        Map<Integer, Convocation> convocations = new HashMap<>();
+        return this.requestRepository.findByStudentId(studentId).stream()
+                .map(request -> this.requestMapper.toStudentRequestDto(request,
+                        convocations.computeIfAbsent(request.getConvocationId(), id -> this.findConvocation(id, today))))
+                .toList();
+    }
+
+    private Convocation findConvocation(int convocationId, LocalDate today) {
+        Convocation convocation = this.convocationRepository.findById(convocationId)
+                .orElseThrow(() -> new NotFoundException("No existe una convocatoria con id " + convocationId));
+        convocation.applyDateRules(today);
+        return convocation;
+    }
+
+    @Override
     @Transactional
     public RequestDetailDto approveRequest(int requestId) {
         Request request = this.findRequest(requestId);
@@ -145,10 +166,7 @@ public class RequestService implements IRequestService {
 
     /** The convocation of the request with its effective state: an open one whose end date passed counts as closed. */
     private Convocation findConvocationOf(Request request) {
-        Convocation convocation = this.convocationRepository.findById(request.getConvocationId())
-                .orElseThrow(() -> new NotFoundException("No existe una convocatoria con id " + request.getConvocationId()));
-        convocation.applyDateRules(LocalDate.now(this.clock));
-        return convocation;
+        return this.findConvocation(request.getConvocationId(), LocalDate.now(this.clock));
     }
 
     private RequestDetailDto toDetailDto(Request request, Convocation convocation) {

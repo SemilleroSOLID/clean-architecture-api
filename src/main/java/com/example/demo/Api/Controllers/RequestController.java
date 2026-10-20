@@ -5,6 +5,7 @@ import com.example.demo.Application.Dtos.RejectRequestDto;
 import com.example.demo.Application.Dtos.RequestDetailDto;
 import com.example.demo.Application.Dtos.RequestDto;
 import com.example.demo.Application.Dtos.RequestSummaryDto;
+import com.example.demo.Application.Dtos.StudentRequestDto;
 import com.example.demo.Application.IRequestService;
 import com.example.demo.Domain.Enums.EnumStateRequest;
 import jakarta.validation.Valid;
@@ -58,5 +59,10 @@ public class RequestController {
     public CustomResponse<RequestDetailDto> rejectRequest(@PathVariable("requestId") Integer requestId,
                                                           @Valid @RequestBody RejectRequestDto reject) {
         return new CustomResponse<>(this.requestService.rejectRequest(requestId, reject.getComment()), "Solicitud rechazada");
+    }
+
+    @GetMapping("/getRequestsByStudent/{studentId}")
+    public CustomResponse<List<StudentRequestDto>> getRequestsByStudent(@PathVariable("studentId") Integer studentId) {
+        return new CustomResponse<>(this.requestService.getRequestsByStudent(studentId), "Solicitudes del estudiante");
     }
 }

@@ -6,6 +6,7 @@ import com.example.demo.Application.Dtos.RequestRequirementDto;
 import com.example.demo.Application.Dtos.RequestSummaryDto;
 import com.example.demo.Application.Dtos.RequirementCheckDto;
 import com.example.demo.Application.Dtos.StudentDto;
+import com.example.demo.Application.Dtos.StudentRequestDto;
 import com.example.demo.Application.Dtos.UnmetRequirementDto;
 import com.example.demo.Domain.Entities.Convocation;
 import com.example.demo.Domain.Entities.ConvocationRequirement;
@@ -95,6 +96,21 @@ public class RequestMapper {
                 })
                 .toList());
         return detail;
+    }
+
+    public StudentRequestDto toStudentRequestDto(Request request, Convocation convocation) {
+        StudentRequestDto studentRequest = new StudentRequestDto();
+        studentRequest.setId(request.getId());
+        studentRequest.setCreationDate(request.getCreationDate());
+        studentRequest.setState(request.getState());
+        studentRequest.setComment(request.getComment());
+        studentRequest.setConvocationId(convocation.getId());
+        studentRequest.setConvocationTitle(convocation.getTitle());
+        studentRequest.setConvocationType(convocation.getType());
+        studentRequest.setConvocationStartDate(convocation.getStartDate());
+        studentRequest.setConvocationEndDate(convocation.getEndDate());
+        studentRequest.setConvocationState(convocation.getState());
+        return studentRequest;
     }
 
     private RequestRequirementDto toDto(RequestRequirement requestRequirement) {
