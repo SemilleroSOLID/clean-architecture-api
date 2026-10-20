@@ -8,7 +8,6 @@ import com.example.demo.Infrastructure.Persistence.Cruds.IRequestCrudRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -31,10 +30,10 @@ public class RequestRepository implements IRequestRepository {
     }
 
     @Override
-    public List<Request> findAll() {
-        List<Request> requests = new ArrayList<>();
-        this.requestCrudRepository.findAll().forEach(requestEntity -> requests.add(this.requestPersistenceMapper.toDomain(requestEntity)));
-        return requests;
+    public List<Request> findAll(Integer convocationId, EnumStateRequest state) {
+        return this.requestCrudRepository.findByFilters(convocationId, state == null ? null : state.getValue()).stream()
+                .map(this.requestPersistenceMapper::toDomain)
+                .toList();
     }
 
     @Override

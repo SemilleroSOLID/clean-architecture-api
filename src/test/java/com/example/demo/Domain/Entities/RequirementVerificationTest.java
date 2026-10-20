@@ -10,6 +10,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RequirementVerificationTest {
@@ -112,6 +113,17 @@ class RequirementVerificationTest {
             List<ConvocationRequirement> unmet = request.verifyRequirements(convocationRequirements);
             assertEquals(List.of("Promedio"), unmet.stream().map(ConvocationRequirement::getName).toList());
             assertEquals(EnumStateRequest.PENDING, request.getState());
+        }
+
+        @Test
+        void unmetRequirementsDoesNotChangeTheStateOfADecidedRequest() {
+            Request request = request(answer(10, "3.8"), answer(11, "2"));
+            request.setState(EnumStateRequest.ACCEPT);
+            List<ConvocationRequirement> unmet = request.unmetRequirements(convocationRequirements);
+            assertEquals(List.of("Promedio"), unmet.stream().map(ConvocationRequirement::getName).toList());
+            assertEquals(EnumStateRequest.ACCEPT, request.getState());
+            assertEquals("3.8", request.valueOf(10));
+            assertNull(request.valueOf(99));
         }
 
         @Test

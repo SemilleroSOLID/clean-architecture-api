@@ -11,6 +11,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -42,6 +43,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DomainValidationException.class)
     public ResponseEntity<CustomResponse<Map<String, String>>> handleDomainValidation(DomainValidationException exception) {
         return badRequest(exception.getErrors());
+    }
+
+    // A query or path parameter with a value of the wrong type, for example ?state=ABIERTA.
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<CustomResponse<Map<String, String>>> handleInvalidParameter(MethodArgumentTypeMismatchException exception) {
+        return badRequest(Map.of(exception.getName(), "El valor \"" + exception.getValue() + "\" no es válido para " + exception.getName()));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

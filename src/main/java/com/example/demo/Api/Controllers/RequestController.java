@@ -1,14 +1,22 @@
 package com.example.demo.Api.Controllers;
 
 import com.example.demo.Api.Dtos.CustomResponse;
+import com.example.demo.Application.Dtos.RequestDetailDto;
 import com.example.demo.Application.Dtos.RequestDto;
+import com.example.demo.Application.Dtos.RequestSummaryDto;
 import com.example.demo.Application.IRequestService;
+import com.example.demo.Domain.Enums.EnumStateRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("request")
@@ -25,5 +33,17 @@ public class RequestController {
         RequestDto createdRequest = this.requestService.createRequest(request);
         String message = createdRequest.getUnmetRequirements().isEmpty() ? REQUEST_ACTIVE_MESSAGE : REQUEST_PENDING_MESSAGE;
         return new CustomResponse<>(createdRequest, message);
+    }
+
+    @GetMapping("/getAllRequests")
+    public CustomResponse<List<RequestSummaryDto>> getAllRequests(@RequestParam(required = false) Integer convocationId,
+                                                                  @RequestParam(required = false) EnumStateRequest state) {
+        return new CustomResponse<>(this.requestService.getAllRequests(convocationId, state), "Lista de solicitudes");
+    }
+
+    @GetMapping("/getRequestById/{requestId}")
+    public CustomResponse<RequestDetailDto> getRequestById(@PathVariable("requestId") Integer requestId) {
+        RequestDetailDto request = this.requestService.getRequestById(requestId);
+        return new CustomResponse<>(request, "Solicitud con id " + request.getId());
     }
 }

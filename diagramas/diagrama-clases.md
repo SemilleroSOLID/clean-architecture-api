@@ -204,6 +204,7 @@ classDiagram
         -EnumStateRequest state
         +validateAgainst(convocationRequirements)
         +verifyRequirements(convocationRequirements) List
+        +unmetRequirements(convocationRequirements) List
     }
     class RequestRequirement {
         -int id

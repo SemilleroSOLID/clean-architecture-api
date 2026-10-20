@@ -6,11 +6,11 @@ import com.example.demo.Domain.Exceptions.DomainValidationException;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /** Application of a student to a convocation (CU-002). */
@@ -63,14 +63,30 @@ public class Request implements Serializable {
      * @return the convocation requirements the student does not meet, empty when all are met
      */
     public List<ConvocationRequirement> verifyRequirements(List<ConvocationRequirement> convocationRequirements) {
-        Map<Integer, String> valueByRequirement = new HashMap<>();
-        requirements.forEach(answer -> valueByRequirement.put(answer.getConvocationRequirementId(), answer.getValue()));
-
-        List<ConvocationRequirement> unmet = convocationRequirements.stream()
-                .filter(requirement -> !requirement.isMetBy(valueByRequirement.get(requirement.getId())))
-                .toList();
+        List<ConvocationRequirement> unmet = unmetRequirements(convocationRequirements);
         state = unmet.isEmpty() ? EnumStateRequest.ACTIVE : EnumStateRequest.PENDING;
         return unmet;
+    }
+
+    /**
+     * The convocation requirements the student does not meet with the values of this request.
+     * It does not change the state, so it can be used on a request that was already decided (issue #16).
+     */
+    public List<ConvocationRequirement> unmetRequirements(List<ConvocationRequirement> convocationRequirements) {
+        return convocationRequirements.stream()
+                .filter(requirement -> !requirement.isMetBy(valueOf(requirement.getId())))
+                .toList();
+    }
+
+    /** The value the student gave for a requirement of the convocation, or null if there is none. */
+    public String valueOf(int convocationRequirementId) {
+        return answerTo(convocationRequirementId).map(RequestRequirement::getValue).orElse(null);
+    }
+
+    public Optional<RequestRequirement> answerTo(int convocationRequirementId) {
+        return requirements.stream()
+                .filter(answer -> answer.getConvocationRequirementId() == convocationRequirementId)
+                .findFirst();
     }
 
     public int getId() {

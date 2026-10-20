@@ -478,6 +478,8 @@ Base: `http://localhost:3001/ms-logica-negocio/api`. Todas las respuestas tienen
 | GET | `/student/getAllStudents` | Lista de estudiantes. |
 | GET | `/student/getStudentById/{id}` | Detalle de un estudiante. |
 | POST | `/request/createRequest` | Crea la solicitud de un estudiante y verifica sus requisitos: queda `ACTIVE` si los cumple todos o `PENDING` si no, con la lista de los que no cumple. |
+| GET | `/request/getAllRequests?convocationId=&state=` | Lista las solicitudes, de la más reciente a la más antigua. Los dos filtros son opcionales. |
+| GET | `/request/getRequestById/{id}` | Detalle con el estudiante, la convocatoria y, por cada requisito, el valor exigido, el valor del estudiante y si lo cumple. |
 | GET | `/test/hello` | Comprueba que el servidor responde. |
 
 </details>
@@ -485,7 +487,7 @@ Base: `http://localhost:3001/ms-logica-negocio/api`. Todas las respuestas tienen
 | Código | Cuándo |
 |---|---|
 | `400` | Datos inválidos o acción no permitida en el estado actual. El cuerpo trae un mapa `campo → mensaje`. |
-| `404` | La convocatoria, el estudiante o el recurso no existe. |
+| `404` | La convocatoria, la solicitud, el estudiante o el recurso no existe. |
 | `409` | Conflicto, por ejemplo una solicitud repetida o eliminar una convocatoria con solicitudes. |
 
 ## Cómo ejecutar todo el sistema

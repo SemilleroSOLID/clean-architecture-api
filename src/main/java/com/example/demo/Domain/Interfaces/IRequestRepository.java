@@ -10,7 +10,8 @@ import java.util.Set;
 public interface IRequestRepository {
     Request save(Request request);
     Optional<Request> findById(int requestId);
-    List<Request> findAll();
+    /** Requests of a convocation and/or in a state; a null filter is not applied. Newest first. */
+    List<Request> findAll(Integer convocationId, EnumStateRequest state);
     boolean existsByConvocationId(int convocationId);
     boolean existsByConvocationIdAndStateIn(int convocationId, Set<EnumStateRequest> states);
     boolean existsByStudentIdAndConvocationId(int studentId, int convocationId);
