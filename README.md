@@ -575,7 +575,7 @@ El trabajo se organiza en [issues](https://github.com/SemilleroSOLID/clean-archi
 | Fase | Contenido | Estado |
 |---|---|---|
 | 1 · Convocatorias (CU-001) | Crear, consultar, editar, eliminar y listar; validaciones; refactor a Clean Architecture; diagrama de estados. | ✅ Terminada |
-| 2 · Solicitudes (CU-002) | Estudiantes, creación de solicitudes y verificación automática de requisitos listos. Falta el formulario del front (#15). | 🔄 En curso |
+| 2 · Solicitudes (CU-002) | Estudiantes, creación de solicitudes, verificación automática de requisitos y formulario de postulación en el front. | ✅ Terminada |
 | 3 · Gestión y notificaciones | Ver, aprobar y rechazar solicitudes, historial y retiro del estudiante, eventos en RabbitMQ, correo real. | ⏳ Pendiente |
 | 4 · Autenticación y roles | JWT con roles Administrador y Estudiante, login y rutas protegidas. | ⏳ Pendiente |
 | 5 · Calidad y despliegue | Patrón State listo. Faltan pruebas con Mockito, pruebas de integración, GitHub Actions, Docker Compose único y diagramas de despliegue y entidad-relación. | 🔄 En curso |
