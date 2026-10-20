@@ -158,7 +158,7 @@ Las flechas que terminan en una excepción cortan el flujo: no se ejecuta nada d
 
 ## 4. Aprobar una solicitud y notificar al estudiante
 
-Aprobar y rechazar ya está implementado ([#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17)): `PUT /request/approveRequest/{id}` y `PUT /request/rejectRequest/{id}`, con la regla de la convocatoria cerrada resuelta por su patrón State (`ensureCanDecideRequests`). Desde [#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20) cada cambio publica el evento `REQUEST_STATUS_CHANGED` (también al crear y al retirar); falta enviar el correo real ([#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21)). Lo nuevo es la comunicación por eventos: el backend no envía el correo, publica un mensaje en RabbitMQ y el microservicio de notificaciones lo procesa por su cuenta.
+Aprobar y rechazar ya está implementado ([#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17)): `PUT /request/approveRequest/{id}` y `PUT /request/rejectRequest/{id}`, con la regla de la convocatoria cerrada resuelta por su patrón State (`ensureCanDecideRequests`). Desde [#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20) cada cambio publica el evento `REQUEST_STATUS_CHANGED` (también al crear y al retirar); y el consumidor envía el correo al estudiante ([#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21)). Lo nuevo es la comunicación por eventos: el backend no envía el correo, publica un mensaje en RabbitMQ y el microservicio de notificaciones lo procesa por su cuenta.
 
 ```mermaid
 sequenceDiagram
@@ -186,7 +186,7 @@ sequenceDiagram
     Pub->>MQ: exchange event.drivent.exchange<br/>routing key "email"
     Ctrl-->>Admin: 200
     MQ-)Cons: mensaje en la cola event.drivent.email
-    Cons-)Est: correo con la decisión (#21)
+    Cons-)Est: correo con la decisión (SMTP)
 ```
 
 El administrador recibe la respuesta sin esperar a que salga el correo. Si el servicio de notificaciones está caído, el mensaje queda en la cola y se envía cuando vuelva. Si el caído es RabbitMQ, la decisión se guarda igual y el backend registra en el log el evento que no pudo publicar. El mensaje completo está en el [README](../README.md#eventos-de-notificación).

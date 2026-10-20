@@ -451,7 +451,7 @@ Dos reglas del publicador:
 - **Solo después del commit.** Dentro de una transacción, el evento se registra para `afterCommit`: si guardar falla, el estudiante nunca recibe un aviso de algo que no pasó. Una operación rechazada (400, 403, 404) no publica nada.
 - **RabbitMQ caído no rompe el negocio.** El cambio ya está guardado; si no se puede publicar, se registra el error en el log (`No se pudo publicar en RabbitMQ el evento ...`) y la petición responde 200. `spring.rabbitmq.connection-timeout=2s` evita que la respuesta se quede esperando. Cuando RabbitMQ vuelve, el backend se reconecta solo.
 
-El consumidor de Node hoy registra el mensaje en su log; el envío real del correo es [#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21). El endpoint de prueba `POST /convocation/sendNotification`, que publicaba texto libre, se eliminó.
+El consumidor de Node envía el correo al estudiante con una plantilla por estado ([#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21)); en desarrollo los correos llegan a Mailpit (http://localhost:8025). Detalle en el [README de notificaciones](https://github.com/SemilleroSOLID/clean-architecture-notification#el-correo-al-estudiante). El endpoint de prueba `POST /convocation/sendNotification`, que publicaba texto libre, se eliminó.
 
 ## Patrones de diseño
 
@@ -574,7 +574,7 @@ Base: `http://localhost:3001/ms-logica-negocio/api`. Todas las respuestas tienen
 ### Pasos
 
 ```bash
-# 1. RabbitMQ (repositorio de notificaciones)
+# 1. RabbitMQ y Mailpit (repositorio de notificaciones)
 cd clean-architecture-notification/node
 docker compose up -d
 
@@ -588,10 +588,10 @@ npm install
 cp .env.example .env
 npm run dev
 
-# 4. (Opcional) Consumidor de notificaciones
+# 4. Consumidor de notificaciones (envía los correos a Mailpit)
 cd ../clean-architecture-notification/node
 npm install
-cp .env.example .env      # descomentar AMQP_URL
+cp .env.example .env
 npm run start:consumer -- email
 ```
 
@@ -603,6 +603,7 @@ El contenedor `sqlserver` ejecuta `create-database.sql` al iniciar: crea `CleanA
 | Backend | http://localhost:3001/ms-logica-negocio/api |
 | SQL Server | `localhost:1435` (usuario `sa`, contraseña en `sqlserver.Dockerfile`) |
 | RabbitMQ | `localhost:5673` · panel en http://localhost:15673 (`admin` / `admin`) |
+| Mailpit (correos de desarrollo) | http://localhost:8025 |
 
 ### Configuración del backend
 
@@ -653,7 +654,7 @@ El trabajo se organiza en [issues](https://github.com/SemilleroSOLID/clean-archi
 |---|---|---|
 | 1 · Convocatorias (CU-001) | Crear, consultar, editar, eliminar y listar; validaciones; refactor a Clean Architecture; diagrama de estados. | ✅ Terminada |
 | 2 · Solicitudes (CU-002) | Estudiantes, creación de solicitudes, verificación automática de requisitos y formulario de postulación en el front. | ✅ Terminada |
-| 3 · Gestión y notificaciones | Ver, aprobar y rechazar solicitudes, historial y retiro del estudiante y eventos en RabbitMQ listos. Falta el correo real ([#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21)). | 🔄 En curso |
+| 3 · Gestión y notificaciones | Ver, aprobar y rechazar solicitudes, historial y retiro del estudiante, eventos en RabbitMQ y correo real al estudiante. | ✅ Terminada |
 | 4 · Autenticación y roles | JWT con roles Administrador y Estudiante, login y rutas protegidas. | ⏳ Pendiente |
 | 5 · Calidad y despliegue | Patrón State listo. Faltan pruebas con Mockito, pruebas de integración, GitHub Actions, Docker Compose único y diagramas de despliegue y entidad-relación. | 🔄 En curso |
 
