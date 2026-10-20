@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -32,6 +33,14 @@ public class RequestRequirementRepository implements IRequestRequirementReposito
     @Override
     public List<RequestRequirement> findByRequestId(int requestId) {
         return this.requestRequirementCrudRepository.findByRequestId(requestId).stream()
+                .map(this.requestPersistenceMapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<RequestRequirement> findByRequestIds(Collection<Integer> requestIds) {
+        if (requestIds.isEmpty()) return List.of();
+        return this.requestRequirementCrudRepository.findByRequestIdIn(requestIds).stream()
                 .map(this.requestPersistenceMapper::toDomain)
                 .toList();
     }

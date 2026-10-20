@@ -50,4 +50,9 @@ class ClosedState extends BaseConvocationState {
     public boolean canDecideRequests() {
         return true;
     }
+
+    @Override
+    public void ensureCanDecideRequests(Convocation convocation) {
+        // Allowed: the requests are decided once every student applied (decision 2 of #30).
+    }
 }

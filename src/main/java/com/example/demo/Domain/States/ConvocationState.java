@@ -33,4 +33,7 @@ public interface ConvocationState {
     void ensureCanReceiveRequests(Convocation convocation, LocalDate today);
 
     boolean canDecideRequests();
+
+    /** Rejects approving or rejecting a request with a message that explains why (issue #17). */
+    void ensureCanDecideRequests(Convocation convocation);
 }

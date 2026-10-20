@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -85,23 +86,74 @@ public class RequestService implements IRequestService {
                 .collect(Collectors.toMap(Student::getId, Student::getName));
         Map<Integer, String> convocationTitles = this.convocationRepository.findAll().stream()
                 .collect(Collectors.toMap(Convocation::getId, Convocation::getTitle));
-        return this.requestRepository.findAll(convocationId, state).stream()
-                .map(request -> this.requestMapper.toSummaryDto(request,
-                        studentNames.get(request.getStudentId()), convocationTitles.get(request.getConvocationId())))
+        List<Request> requests = this.requestRepository.findAll(convocationId, state);
+
+        // The values of every request in one query, and the requirements of each convocation only once.
+        Map<Integer, List<RequestRequirement>> answersByRequest = this.requestRequirementRepository
+                .findByRequestIds(requests.stream().map(Request::getId).toList()).stream()
+                .collect(Collectors.groupingBy(RequestRequirement::getRequestId));
+        Map<Integer, List<ConvocationRequirement>> requirementsByConvocation = new HashMap<>();
+
+        return requests.stream()
+                .map(request -> {
+                    request.setRequirements(answersByRequest.getOrDefault(request.getId(), List.of()));
+                    List<ConvocationRequirement> convocationRequirements = requirementsByConvocation.computeIfAbsent(
+                            request.getConvocationId(), this.convocationRequirementRepository::findConvocationRequirements);
+                    return this.requestMapper.toSummaryDto(request, studentNames.get(request.getStudentId()),
+                            convocationTitles.get(request.getConvocationId()), request.unmetRequirements(convocationRequirements));
+                })
                 .toList();
     }
 
     @Override
     public RequestDetailDto getRequestById(int requestId) {
+        Request request = this.findRequest(requestId);
+        return this.toDetailDto(request, this.findConvocationOf(request));
+    }
+
+    @Override
+    @Transactional
+    public RequestDetailDto approveRequest(int requestId) {
+        Request request = this.findRequest(requestId);
+        Convocation convocation = this.findConvocationOf(request);
+        request.approve(convocation);
+        return this.toDetailDto(this.saveDecision(request), convocation);
+    }
+
+    @Override
+    @Transactional
+    public RequestDetailDto rejectRequest(int requestId, String comment) {
+        Request request = this.findRequest(requestId);
+        Convocation convocation = this.findConvocationOf(request);
+        request.reject(convocation, comment);
+        return this.toDetailDto(this.saveDecision(request), convocation);
+    }
+
+    // The notification to the student of each decision is published in #20.
+    private Request saveDecision(Request request) {
+        Request saved = this.requestRepository.save(request);
+        saved.setRequirements(request.getRequirements());
+        return saved;
+    }
+
+    private Request findRequest(int requestId) {
         Request request = this.requestRepository.findById(requestId)
                 .orElseThrow(() -> new NotFoundException("No existe una solicitud con id " + requestId));
         request.setRequirements(this.requestRequirementRepository.findByRequestId(requestId));
-        Student student = this.studentRepository.findById(request.getStudentId())
-                .orElseThrow(() -> new NotFoundException("No existe un estudiante con id " + request.getStudentId()));
+        return request;
+    }
+
+    /** The convocation of the request with its effective state: an open one whose end date passed counts as closed. */
+    private Convocation findConvocationOf(Request request) {
         Convocation convocation = this.convocationRepository.findById(request.getConvocationId())
                 .orElseThrow(() -> new NotFoundException("No existe una convocatoria con id " + request.getConvocationId()));
         convocation.applyDateRules(LocalDate.now(this.clock));
+        return convocation;
+    }
 
+    private RequestDetailDto toDetailDto(Request request, Convocation convocation) {
+        Student student = this.studentRepository.findById(request.getStudentId())
+                .orElseThrow(() -> new NotFoundException("No existe un estudiante con id " + request.getStudentId()));
         List<ConvocationRequirement> convocationRequirements = this.convocationRequirementRepository.findConvocationRequirements(convocation.getId());
         return this.requestMapper.toDetailDto(request, this.studentMapper.toDto(student), convocation,
                 convocationRequirements, request.unmetRequirements(convocationRequirements));

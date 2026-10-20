@@ -68,6 +68,11 @@ abstract class BaseConvocationState implements ConvocationState {
         return false;
     }
 
+    @Override
+    public void ensureCanDecideRequests(Convocation convocation) {
+        throw new InvalidConvocationStateException("No se pueden decidir solicitudes de una convocatoria " + label());
+    }
+
     /** Cancelling is allowed in more than one state and always needs a reason. */
     protected void cancelWithReason(Convocation convocation, String reason) {
         if (reason == null || reason.isBlank()) {

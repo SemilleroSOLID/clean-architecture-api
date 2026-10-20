@@ -14,4 +14,8 @@ public interface IRequestService {
     List<RequestSummaryDto> getAllRequests(Integer convocationId, EnumStateRequest state);
 
     RequestDetailDto getRequestById(int requestId);
+
+    RequestDetailDto approveRequest(int requestId);
+
+    RequestDetailDto rejectRequest(int requestId, String comment);
 }

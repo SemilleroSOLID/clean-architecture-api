@@ -4,6 +4,8 @@ import com.example.demo.Domain.Enums.EnumStateRequest;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /** One row of the list of requests the administrator reviews (issue #16). */
 public class RequestSummaryDto implements Serializable {
@@ -14,8 +16,18 @@ public class RequestSummaryDto implements Serializable {
     private String convocationTitle;
     private LocalDate creationDate;
     private EnumStateRequest state;
+    // Names of the requirements the student does not meet, so the pending ones are reviewed carefully.
+    private List<String> unmetRequirements = new ArrayList<>();
 
     public RequestSummaryDto() {}
+
+    public List<String> getUnmetRequirements() {
+        return unmetRequirements;
+    }
+
+    public void setUnmetRequirements(List<String> unmetRequirements) {
+        this.unmetRequirements = unmetRequirements;
+    }
 
     public int getId() {
         return id;

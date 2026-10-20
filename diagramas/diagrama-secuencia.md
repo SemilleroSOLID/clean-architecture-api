@@ -156,9 +156,9 @@ sequenceDiagram
 
 Las flechas que terminan en una excepción cortan el flujo: no se ejecuta nada de lo que sigue. Como todas las comprobaciones van antes del primer `INSERT`, una solicitud inválida nunca llega a la base de datos, y si algo falla al guardar los requisitos, `@Transactional` deshace también la solicitud.
 
-## 4. Aprobar una solicitud y notificar (planeado)
+## 4. Aprobar una solicitud y notificar (en parte planeado)
 
-Así quedará el flujo cuando se terminen [#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17), [#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20) y [#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21). Lo nuevo es la comunicación por eventos: el backend no envía el correo, publica un mensaje en RabbitMQ y el microservicio de notificaciones lo procesa por su cuenta.
+Aprobar y rechazar ya está implementado ([#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17)): `PUT /request/approveRequest/{id}` y `PUT /request/rejectRequest/{id}`, con la regla de la convocatoria cerrada resuelta por su patrón State (`ensureCanDecideRequests`). Falta publicar el evento ([#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20)) y enviar el correo ([#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21)). Lo nuevo es la comunicación por eventos: el backend no envía el correo, publica un mensaje en RabbitMQ y el microservicio de notificaciones lo procesa por su cuenta.
 
 ```mermaid
 sequenceDiagram
@@ -174,9 +174,9 @@ sequenceDiagram
     actor Est as Estudiante
 
     Admin->>Ctrl: PUT aprobar o rechazar con justificación
-    Ctrl->>Svc: decide(requestId, decisión, justificación)
-    Svc->>Req: approve() / reject(justificación)
-    Note over Req: Solo si la convocatoria está cerrada<br/>(canDecideRequests) y la solicitud no está decidida
+    Ctrl->>Svc: approveRequest(id) / rejectRequest(id, comment)
+    Svc->>Req: approve(convocation) / reject(convocation, comment)
+    Note over Req: Solo si la solicitud no está decidida<br/>y la convocatoria está cerrada (ensureCanDecideRequests)
     Svc->>Repo: save(request)
     Svc->>Pub: publicar evento "solicitud decidida"
     Note over Svc,Pub: Svc solo conoce la interfaz de Application,<br/>RabbitMQ es un detalle de Infrastructure

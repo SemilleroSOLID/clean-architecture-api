@@ -280,7 +280,7 @@ stateDiagram-v2
 | Finalizar | `PUT /finishConvocation/{id}` | ❌ | ✅ si todo está decidido | ❌ | ❌ |
 | Cancelar | `PUT /cancelConvocation/{id}` | ✅ | ✅ | ❌ | ❌ |
 | Recibir solicitudes | `POST /request/createRequest` | ✅ dentro de las fechas | ❌ | ❌ | ❌ |
-| Decidir solicitudes | (planeado, #17) | ❌ | ✅ | ❌ | ❌ |
+| Aprobar o rechazar solicitudes | `PUT /request/approveRequest/{id}` · `rejectRequest/{id}` | ❌ | ✅ | ❌ | ❌ |
 
 Si se intenta una acción no permitida, la API responde **400** con un mensaje claro, por ejemplo `{ "state": "No se puede editar una convocatoria cerrada" }`. El front muestra solo los botones permitidos en cada estado, pero la regla real está en el backend.
 
@@ -480,6 +480,8 @@ Base: `http://localhost:3001/ms-logica-negocio/api`. Todas las respuestas tienen
 | POST | `/request/createRequest` | Crea la solicitud de un estudiante y verifica sus requisitos: queda `ACTIVE` si los cumple todos o `PENDING` si no, con la lista de los que no cumple. |
 | GET | `/request/getAllRequests?convocationId=&state=` | Lista las solicitudes, de la más reciente a la más antigua. Los dos filtros son opcionales. |
 | GET | `/request/getRequestById/{id}` | Detalle con el estudiante, la convocatoria y, por cada requisito, el valor exigido, el valor del estudiante y si lo cumple. |
+| PUT | `/request/approveRequest/{id}` | Aprueba una solicitud sin decidir (`PENDING` o `ACTIVE`) de una convocatoria cerrada: queda `ACCEPT`. |
+| PUT | `/request/rejectRequest/{id}` | La rechaza con justificación obligatoria. Cuerpo: `{ "comment": "..." }`. Queda `REJECT` y la justificación se guarda para el estudiante. |
 | GET | `/test/hello` | Comprueba que el servidor responde. |
 
 </details>

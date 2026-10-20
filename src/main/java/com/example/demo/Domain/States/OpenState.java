@@ -64,4 +64,10 @@ class OpenState extends BaseConvocationState {
                     + convocation.getEndDate().format(DATE_FORMAT));
         }
     }
+
+    @Override
+    public void ensureCanDecideRequests(Convocation convocation) {
+        throw new InvalidConvocationStateException(
+                "La convocatoria sigue abierta: ciérrela para poder aprobar o rechazar sus solicitudes");
+    }
 }

@@ -14,6 +14,7 @@ public class RequestDetailDto implements Serializable {
     private int id;
     private LocalDate creationDate;
     private EnumStateRequest state;
+    private String comment;
     private StudentDto student;
     private int convocationId;
     private String convocationTitle;
@@ -22,6 +23,14 @@ public class RequestDetailDto implements Serializable {
     private List<RequirementCheckDto> requirements = new ArrayList<>();
 
     public RequestDetailDto() {}
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
+    }
 
     public int getId() {
         return id;

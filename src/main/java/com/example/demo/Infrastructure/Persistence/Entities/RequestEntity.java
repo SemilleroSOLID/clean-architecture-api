@@ -24,6 +24,17 @@ public class RequestEntity {
     @Column(name = "studentId", nullable = false)
     private Integer studentId;
 
+    @Column(name = "comment", length = 500)
+    private String comment;
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
+    }
+
     public Integer getId() {
         return id;
     }

@@ -50,7 +50,8 @@ public class RequestMapper {
                 .toList();
     }
 
-    public RequestSummaryDto toSummaryDto(Request request, String studentName, String convocationTitle) {
+    public RequestSummaryDto toSummaryDto(Request request, String studentName, String convocationTitle,
+                                          List<ConvocationRequirement> unmetRequirements) {
         RequestSummaryDto summary = new RequestSummaryDto();
         summary.setId(request.getId());
         summary.setStudentId(request.getStudentId());
@@ -59,6 +60,7 @@ public class RequestMapper {
         summary.setConvocationTitle(convocationTitle);
         summary.setCreationDate(request.getCreationDate());
         summary.setState(request.getState());
+        summary.setUnmetRequirements(unmetRequirements.stream().map(ConvocationRequirement::getName).toList());
         return summary;
     }
 
@@ -71,6 +73,7 @@ public class RequestMapper {
         detail.setId(request.getId());
         detail.setCreationDate(request.getCreationDate());
         detail.setState(request.getState());
+        detail.setComment(request.getComment());
         detail.setStudent(student);
         detail.setConvocationId(convocation.getId());
         detail.setConvocationTitle(convocation.getTitle());

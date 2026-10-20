@@ -2,6 +2,7 @@ package com.example.demo.Domain.Entities;
 
 import com.example.demo.Domain.Enums.EnumStateRequest;
 import com.example.demo.Domain.Exceptions.DomainValidationException;
+import com.example.demo.Domain.Exceptions.InvalidRequestStateException;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -20,6 +21,8 @@ public class Request implements Serializable {
     private int convocationId;
     private LocalDate creationDate;
     private EnumStateRequest state;
+    // Justification of the administrator when the request is rejected (issue #17).
+    private String comment;
     private List<RequestRequirement> requirements = new ArrayList<>();
 
     public Request(){}
@@ -87,6 +90,38 @@ public class Request implements Serializable {
         return requirements.stream()
                 .filter(answer -> answer.getConvocationRequirementId() == convocationRequirementId)
                 .findFirst();
+    }
+
+    /** The administrator approves a request that was not decided yet, once its convocation is closed. */
+    public void approve(Convocation convocation) {
+        ensureCanBeDecided(convocation, "aprobar");
+        state = EnumStateRequest.ACCEPT;
+    }
+
+    /** Like approving, but a justification is required: the student will read it (issue #18). */
+    public void reject(Convocation convocation, String comment) {
+        ensureCanBeDecided(convocation, "rechazar");
+        if (comment == null || comment.isBlank()) {
+            throw new DomainValidationException(Map.of("comment", "La justificación del rechazo es obligatoria"));
+        }
+        this.comment = comment.trim();
+        state = EnumStateRequest.REJECT;
+    }
+
+    private void ensureCanBeDecided(Convocation convocation, String action) {
+        if (!EnumStateRequest.UNDECIDED.contains(state)) {
+            throw new InvalidRequestStateException("No se puede " + action + " una solicitud que ya fue "
+                    + (state == EnumStateRequest.ACCEPT ? "aprobada" : "rechazada"));
+        }
+        convocation.ensureCanDecideRequests();
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
     }
 
     public int getId() {

@@ -1,6 +1,7 @@
 package com.example.demo.Api.Controllers;
 
 import com.example.demo.Api.Dtos.CustomResponse;
+import com.example.demo.Application.Dtos.RejectRequestDto;
 import com.example.demo.Application.Dtos.RequestDetailDto;
 import com.example.demo.Application.Dtos.RequestDto;
 import com.example.demo.Application.Dtos.RequestSummaryDto;
@@ -11,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -45,5 +47,16 @@ public class RequestController {
     public CustomResponse<RequestDetailDto> getRequestById(@PathVariable("requestId") Integer requestId) {
         RequestDetailDto request = this.requestService.getRequestById(requestId);
         return new CustomResponse<>(request, "Solicitud con id " + request.getId());
+    }
+
+    @PutMapping("/approveRequest/{requestId}")
+    public CustomResponse<RequestDetailDto> approveRequest(@PathVariable("requestId") Integer requestId) {
+        return new CustomResponse<>(this.requestService.approveRequest(requestId), "Solicitud aprobada");
+    }
+
+    @PutMapping("/rejectRequest/{requestId}")
+    public CustomResponse<RequestDetailDto> rejectRequest(@PathVariable("requestId") Integer requestId,
+                                                          @Valid @RequestBody RejectRequestDto reject) {
+        return new CustomResponse<>(this.requestService.rejectRequest(requestId, reject.getComment()), "Solicitud rechazada");
     }
 }

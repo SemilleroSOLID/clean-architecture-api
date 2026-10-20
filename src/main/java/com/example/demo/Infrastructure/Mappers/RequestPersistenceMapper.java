@@ -19,6 +19,7 @@ public class RequestPersistenceMapper {
         request.setConvocationId(requestEntity.getConvocationId());
         request.setCreationDate(requestEntity.getCreationDate().toLocalDate());
         request.setState(EnumStateRequest.fromValue(requestEntity.getRequestState()));
+        request.setComment(requestEntity.getComment());
         return request;
     }
 
@@ -29,6 +30,7 @@ public class RequestPersistenceMapper {
         requestEntity.setConvocationId(request.getConvocationId());
         requestEntity.setCreationDate(Date.valueOf(request.getCreationDate()));
         requestEntity.setRequestState(request.getState().getValue());
+        requestEntity.setComment(request.getComment());
         return requestEntity;
     }
 

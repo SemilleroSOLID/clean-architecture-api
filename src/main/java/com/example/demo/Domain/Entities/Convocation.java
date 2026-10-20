@@ -135,6 +135,10 @@ public class Convocation implements Serializable {
         return currentState().canDecideRequests();
     }
 
+    public void ensureCanDecideRequests() {
+        currentState().ensureCanDecideRequests(this);
+    }
+
     public String getCancellationReason() {
         return cancellationReason;
     }

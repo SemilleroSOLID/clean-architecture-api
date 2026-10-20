@@ -167,6 +167,7 @@ classDiagram
         +cancel(reason)
         +ensureCanReceiveRequests(today)
         +canDecideRequests() boolean
+        +ensureCanDecideRequests()
     }
     class ConvocationRequirement {
         -int id
@@ -202,7 +203,10 @@ classDiagram
         -int convocationId
         -LocalDate creationDate
         -EnumStateRequest state
+        -String comment
         +validateAgainst(convocationRequirements)
+        +approve(convocation)
+        +reject(convocation, comment)
         +verifyRequirements(convocationRequirements) List
         +unmetRequirements(convocationRequirements) List
     }
