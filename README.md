@@ -21,12 +21,12 @@
 </p>
 
 <p align="center">
-  <a href="#visión-general">Visión general</a> ·
+  <a href="#empezar-rápido">Empezar rápido</a> ·
   <a href="#clean-architecture-en-este-proyecto">Clean Architecture</a> ·
   <a href="#ciclo-de-vida-de-una-convocatoria">Estados</a> ·
-  <a href="#endpoints">Endpoints</a> ·
-  <a href="#cómo-ejecutar-todo-el-sistema">Ejecutar</a> ·
-  <a href="#diagramas">Diagramas</a>
+  <a href="#antipatrones-dónde-cómo-y-por-qué">Antipatrones</a> ·
+  <a href="#pruebas">Pruebas</a> ·
+  <a href="#cómo-contribuir">Contribuir</a>
 </p>
 
 ---
@@ -41,23 +41,66 @@ Este repositorio es el **backend** y también la **documentación principal** de
 
 ## Contenido
 
-1. [Visión general](#visión-general)
-2. [Tecnologías](#tecnologías)
-3. [Clean Architecture en este proyecto](#clean-architecture-en-este-proyecto)
-4. [Las cuatro capas](#las-cuatro-capas)
-5. [Cómo se cumple la regla de dependencias](#cómo-se-cumple-la-regla-de-dependencias)
-6. [Ciclo de vida de una convocatoria](#ciclo-de-vida-de-una-convocatoria)
-7. [Recorrido de una petición](#recorrido-de-una-petición)
-8. [Eventos de notificación](#eventos-de-notificación)
-9. [Seguridad: login con JWT y roles](#seguridad-login-con-jwt-y-roles)
-10. [Patrones de diseño](#patrones-de-diseño)
-11. [Estructura de carpetas](#estructura-de-carpetas)
-12. [Cómo agregar una funcionalidad](#cómo-agregar-una-funcionalidad)
-13. [Endpoints](#endpoints)
-14. [Cómo ejecutar todo el sistema](#cómo-ejecutar-todo-el-sistema)
-15. [Pruebas](#pruebas)
-16. [Diagramas](#diagramas)
-17. [Estado del proyecto](#estado-del-proyecto)
+1. [Empezar rápido](#empezar-rápido)
+2. [Visión general](#visión-general)
+3. [Tecnologías](#tecnologías)
+4. [Clean Architecture en este proyecto](#clean-architecture-en-este-proyecto)
+5. [Las cuatro capas](#las-cuatro-capas)
+6. [Cómo se cumple la regla de dependencias](#cómo-se-cumple-la-regla-de-dependencias)
+7. [Ciclo de vida de una convocatoria](#ciclo-de-vida-de-una-convocatoria)
+8. [Recorrido de una petición](#recorrido-de-una-petición)
+9. [Eventos de notificación](#eventos-de-notificación)
+10. [Seguridad: login con JWT y roles](#seguridad-login-con-jwt-y-roles)
+11. [Patrones de diseño](#patrones-de-diseño)
+12. [Antipatrones: dónde, cómo y por qué](#antipatrones-dónde-cómo-y-por-qué)
+13. [Estructura de carpetas](#estructura-de-carpetas)
+14. [Cómo agregar una funcionalidad](#cómo-agregar-una-funcionalidad)
+15. [Endpoints](#endpoints)
+16. [Cómo ejecutar todo el sistema](#cómo-ejecutar-todo-el-sistema)
+17. [Pruebas](#pruebas)
+18. [Cómo contribuir](#cómo-contribuir)
+19. [Diagramas](#diagramas)
+20. [Qué falta](#qué-falta)
+
+## Empezar rápido
+
+Para ver el sistema funcionando en tu máquina solo necesitas **Git** y **Docker Desktop**.
+
+```bash
+mkdir "Clean Architecture" && cd "Clean Architecture"
+git clone https://github.com/SemilleroSOLID/clean-architecture-api.git      # o tu fork, ver "Cómo contribuir"
+git clone https://github.com/SemilleroSOLID/clean-architecture-front.git
+git clone https://github.com/SemilleroSOLID/clean-architecture-notification.git
+
+cd clean-architecture-api
+docker compose up -d --build
+```
+
+La primera vez tarda unos minutos. Cuando `docker compose ps` muestre el backend `healthy`:
+
+| Qué | Dónde | Usuario |
+|---|---|---|
+| Aplicación web | http://localhost:5173 | Administrador `admin@ucaldas.test` / `Admin2026*` · Estudiante `laura.gomez@ucaldas.test` / `Estudiante2026*` |
+| API | http://localhost:3001/ms-logica-negocio/api | Token de `POST /auth/login` |
+| Correos que reciben los estudiantes (Mailpit) | http://localhost:8025 | |
+| Panel de RabbitMQ | http://localhost:15673 | `admin` / `admin` |
+
+Las pruebas no necesitan el sistema arriba:
+
+```bash
+./gradlew test       # con Java 17
+docker run --rm -v "$(pwd)":/app -v gradle-cache:/root/.gradle -w /app eclipse-temurin:17-jdk-jammy bash ./gradlew test   # sin Java
+```
+
+En PowerShell, cambia `$(pwd)` por `${PWD}`.
+
+**Si es tu primera vez con el proyecto**, este orden ayuda a entenderlo:
+
+1. [Clean Architecture en este proyecto](#clean-architecture-en-este-proyecto) y [Las cuatro capas](#las-cuatro-capas): dónde va cada cosa y por qué.
+2. [Ciclo de vida de una convocatoria](#ciclo-de-vida-de-una-convocatoria): el patrón State, que es el corazón del dominio.
+3. [Recorrido de una petición](#recorrido-de-una-petición) y los [diagramas de secuencia](diagramas/diagrama-secuencia.md): cómo viaja una petición por las capas.
+4. [Antipatrones](#antipatrones-dónde-cómo-y-por-qué): qué no copiar y por qué está así.
+5. [Pruebas](#pruebas) y [Cómo contribuir](#cómo-contribuir): para tomar una de las [pruebas pendientes](#qué-falta).
 
 ## Visión general
 
@@ -90,7 +133,7 @@ flowchart LR
     A4 -- "JDBC :1435" --> DB[(SQL Server)]
     A4 -- "publica :5673" --> MQ{{RabbitMQ}}
     MQ -- "cola event.drivent.email" --> C
-    C -. "correo (planeado #21)" .-> U
+    C -. "correo (Mailpit en desarrollo)" .-> U
 ```
 
 | Comunicación | Tipo | Por qué |
@@ -115,7 +158,8 @@ Dentro del backend, cada tecnología tiene un lugar fijo, y eso es parte de la a
 | Jakarta Bean Validation | Validar formato del JSON (`@NotBlank`, `@NotNull`, `@Size`) | Application (DTOs) |
 | Spring Data JPA / Hibernate | Leer y escribir en SQL Server | Solo Infrastructure |
 | Spring AMQP | Publicar mensajes en RabbitMQ | Solo Infrastructure |
-| JUnit 5 | Pruebas unitarias | Domain (sin Spring) |
+| Spring Security + jjwt + BCrypt | Login, roles y contraseñas | Api (reglas de acceso) e Infrastructure (JWT y BCrypt) |
+| JUnit 5 + Mockito + JaCoCo | Pruebas y cobertura | `src/test` (el dominio se prueba sin Spring) |
 | Java puro (`java.time`, colecciones) | Reglas del negocio | Domain |
 
 ## Clean Architecture en este proyecto
@@ -142,7 +186,7 @@ flowchart TB
 
 Lo que se gana:
 
-- **El negocio se prueba sin base de datos ni servidor.** Las 48 pruebas del dominio corren en milisegundos con JUnit, sin levantar Spring.
+- **El negocio se prueba sin base de datos ni servidor.** Las 61 pruebas del dominio corren en milisegundos con JUnit, sin levantar Spring.
 - **Los cambios de tecnología quedan aislados.** Cambiar la base de datos implica reescribir Infrastructure; el dominio y los casos de uso no se tocan.
 - **Cada regla vive en un solo lugar.** Para cambiar cuándo se cierra una convocatoria se abre `OpenState.java`, no hay condicionales repartidos por los servicios.
 
@@ -171,8 +215,8 @@ No depende de nada: ni Spring, ni JPA, ni Jackson. Solo Java.
 |---|---|
 | Entidades con reglas | `Convocation.validate(today, catalog)` revisa fechas y requisitos. `Request.validateAgainst(requirements)` revisa que la solicitud responda todos los requisitos y `Request.verifyRequirements(requirements)` la deja `ACTIVE` o `PENDING` según los cumpla. |
 | Enums del negocio | `EnumConvocationState`, `EnumStateRequest`, `EnumConvocationType`, `EnumConditionRequirement`, `EnumRole`. |
-| Patrón State | `Domain/States/`, una clase por estado de la convocatoria. |
-| Excepciones de negocio | `DomainValidationException` (mapa campo → mensaje) e `InvalidConvocationStateException`. |
+| Patrón State | `Domain/States/`, una clase por estado de la convocatoria y de la solicitud. |
+| Excepciones de negocio | `DomainValidationException` (mapa campo → mensaje), `InvalidConvocationStateException` e `InvalidRequestStateException`. |
 | Puertos de persistencia | `IConvocationRepository`, `IRequestRepository`, `IUserRepository`... Dicen **qué** se necesita guardar o consultar, no **cómo**. |
 
 La fecha de "hoy" no se obtiene dentro del dominio con `LocalDate.now()`: se recibe como parámetro. Así las pruebas fijan el día que necesitan y el dominio no depende del reloj del servidor.
@@ -236,7 +280,7 @@ grep -rn "import com.example.demo.Infrastructure" src/main/java/com/example/demo
 | **Reglas dentro de las entidades** | Los servicios no validan fechas ni preguntan por el estado: llaman a `convocation.validate(...)`, `convocation.close()`, `request.validateAgainst(...)`. |
 | **Errores sin HTTP en el dominio** | El dominio lanza `DomainValidationException`; solo `GlobalExceptionHandler` sabe que eso es un 400. |
 
-> **Concesión consciente.** Application usa anotaciones de Spring (`@Service`, `@Autowired`, `@Transactional`). En una versión estricta esa capa tampoco dependería del framework. Se acepta porque simplifica el proyecto y no afecta lo esencial: **el dominio es Java puro** y se prueba sin Spring.
+> **Concesión consciente.** Application usa anotaciones de Spring (`@Service`, `@Autowired`, `@Transactional`). En una versión estricta esa capa tampoco dependería del framework. Se acepta porque simplifica el proyecto y no afecta lo esencial: **el dominio es Java puro** y se prueba sin Spring. Está explicado con los demás [antipatrones](#antipatrones-dónde-cómo-y-por-qué).
 
 ## Ciclo de vida de una convocatoria
 
@@ -380,7 +424,7 @@ El detalle completo, con las decisiones del equipo y el anexo de estados de la s
 
 ### Estados de una solicitud
 
-Las solicitudes siguen el mismo patrón desde [#19](https://github.com/SemilleroSOLID/clean-architecture-api/issues/19): `ReviewRequestState` (que comparten `PENDING` y `ACTIVE`) permite aprobar, rechazar y retirar; `AcceptedRequestState`, `RejectedRequestState` y `CancelledRequestState` son finales.
+Las solicitudes siguen el mismo patrón: `ReviewRequestState` (que comparten `PENDING` y `ACTIVE`) permite aprobar, rechazar y retirar; `AcceptedRequestState`, `RejectedRequestState` y `CancelledRequestState` son finales.
 
 ```mermaid
 stateDiagram-v2
@@ -389,7 +433,7 @@ stateDiagram-v2
         Pendiente: Pendiente (PENDING)<br/>no cumple algún requisito
         Activa: Activa (ACTIVE)<br/>cumple todos
     }
-    [*] --> Revision : el estudiante la envía<br/>(verificación automática, #14)
+    [*] --> Revision : el estudiante la envía<br/>(verificación automática)
     Revision --> Aprobada : aprobar (administrador)<br/>[convocatoria cerrada]
     Revision --> Rechazada : rechazar (administrador)<br/>[convocatoria cerrada y justificación]
     Revision --> Retirada : retirar (estudiante dueño)
@@ -415,7 +459,7 @@ Los recorridos completos, con los casos de error, están en [diagramas/diagrama-
 
 ## Eventos de notificación
 
-Desde [#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20), cada vez que una solicitud se crea o cambia de estado el backend publica un evento en RabbitMQ para que el microservicio de notificaciones le avise al estudiante. El backend no envía correos: publica y responde.
+Cada vez que una solicitud se crea o cambia de estado el backend publica un evento en RabbitMQ para que el microservicio de notificaciones le avise al estudiante. El backend no envía correos: publica y responde.
 
 | Acción | Endpoint | `previousState` → `newState` |
 |---|---|---|
@@ -455,11 +499,11 @@ Dos reglas del publicador:
 - **Solo después del commit.** Dentro de una transacción, el evento se registra para `afterCommit`: si guardar falla, el estudiante nunca recibe un aviso de algo que no pasó. Una operación rechazada (400, 403, 404) no publica nada.
 - **RabbitMQ caído no rompe el negocio.** El cambio ya está guardado; si no se puede publicar, se registra el error en el log (`No se pudo publicar en RabbitMQ el evento ...`) y la petición responde 200. `spring.rabbitmq.connection-timeout=2s` evita que la respuesta se quede esperando. Cuando RabbitMQ vuelve, el backend se reconecta solo.
 
-El consumidor de Node envía el correo al estudiante con una plantilla por estado ([#21](https://github.com/SemilleroSOLID/clean-architecture-api/issues/21)); en desarrollo los correos llegan a Mailpit (http://localhost:8025). Detalle en el [README de notificaciones](https://github.com/SemilleroSOLID/clean-architecture-notification#el-correo-al-estudiante). El endpoint de prueba `POST /convocation/sendNotification`, que publicaba texto libre, se eliminó.
+El consumidor de Node envía el correo al estudiante con una plantilla por estado; en desarrollo los correos llegan a Mailpit (http://localhost:8025). Detalle en el [README de notificaciones](https://github.com/SemilleroSOLID/clean-architecture-notification#el-correo-al-estudiante).
 
 ## Seguridad: login con JWT y roles
 
-Desde [#22](https://github.com/SemilleroSOLID/clean-architecture-api/issues/22) todos los endpoints, salvo el login y `/test/hello`, piden un token. Hay dos roles: **ADMIN** gestiona convocatorias, estudiantes y todas las solicitudes; **STUDENT** ve las convocatorias y crea, ve y retira **solo sus** solicitudes.
+Todos los endpoints, salvo el login y `/test/hello`, piden un token. Hay dos roles: **ADMIN** gestiona convocatorias, estudiantes y todas las solicitudes; **STUDENT** ve las convocatorias y crea, ve y retira **solo sus** solicitudes.
 
 ```mermaid
 sequenceDiagram
@@ -502,7 +546,7 @@ Decisiones:
 - **El estudiante sale del token.** `createRequest` y `cancelRequest` ya no reciben `studentId`: si alguien lo manda en el cuerpo, se ignora.
 - **Un estudiante no ve solicitudes de otro:** el detalle y el historial ajenos responden 403 (lo revisa `RequestService`, porque depende del dueño de cada solicitud).
 - **Sin sesión en el servidor:** cada petición trae su token; por eso no hay cookie ni protección CSRF. El token dura 8 horas (`JWT_EXPIRATION_MINUTES`).
-- **401 y 403 con el mismo formato** `CustomResponse` que el resto de errores. Un token vencido o alterado responde *"La sesión no es válida o venció"*; el front ([#23](https://github.com/SemilleroSOLID/clean-architecture-api/issues/23)) borra la sesión y vuelve al login con ese aviso.
+- **401 y 403 con el mismo formato** `CustomResponse` que el resto de errores. Un token vencido o alterado responde *"La sesión no es válida o venció"*; el front borra la sesión y vuelve al login con ese aviso.
 
 Usuarios de desarrollo (los crea `create-database.sql`):
 
@@ -525,53 +569,131 @@ Usuarios de desarrollo (los crea `create-database.sql`):
 | **Publish / Subscribe** | RabbitMQ + notificaciones | Desacoplar el envío de notificaciones del backend. |
 | **Chain of Responsibility** | Filtros de Spring Security + `JwtAuthenticationFilter` | Cada filtro revisa la petición y la pasa al siguiente; el del JWT pone el usuario antes de las reglas de acceso. |
 
+## Antipatrones: dónde, cómo y por qué
+
+Un **antipatrón** es una solución que parece práctica pero trae problemas conocidos. En este proyecto hay algunos: unos vienen del código original y otros se aceptaron a propósito para que el proyecto fuera simple de levantar y de entender. Se documentan aquí para que **no se copien sin pensar** y para saber qué mejorar si el proyecto crece.
+
+### Los que hay en el código
+
+**1. Inyección por campo (`@Autowired` en los atributos)**
+- **Dónde:** 43 campos en 19 clases: servicios, controladores y repositorios. Ejemplo: `@Autowired private IRequestRepository requestRepository;` en `RequestService`.
+- **Por qué se usó:** era el estilo del código original y requiere menos código que un constructor.
+- **Qué problema trae:** las dependencias quedan escondidas (no se ven en un constructor), los campos no pueden ser `final` y, para probar la clase, Mockito tiene que meterlas por reflexión con `@InjectMocks`. Por eso `AuthService` y `RabbitMQSender` tienen un constructor extra solo para las pruebas.
+- **Cómo se corrige:** inyección por constructor con campos `private final`. `JwtTokenProvider` y `SecurityErrorWriter` ya lo hacen así.
+
+**2. Setters públicos en las entidades del dominio**
+- **Dónde:** `Convocation`, `Request` y las demás entidades tienen todos sus setters públicos, incluido `setState(...)`.
+- **Por qué se usó:** los mappers reconstruyen las entidades desde la base y desde los DTO con setters, y así venían las clases.
+- **Qué problema trae:** cualquier clase puede saltarse las reglas: `request.setState(ACCEPT)` aprueba una solicitud sin pasar por el patrón State ni revisar que la convocatoria esté cerrada. Hoy solo lo usan los estados y los mappers, pero nada lo impide.
+- **Cómo se corrige:** que el estado solo cambie con `approve`, `reject`, `cancel`, `close`...; reconstruir las entidades con un constructor o un método de fábrica (`Request.restore(...)`) y dejar los setters de estado con visibilidad de paquete.
+
+**3. La capa Application depende del framework**
+- **Dónde:** `@Service`, `@Autowired` y `@Transactional` en los servicios, y anotaciones de Bean Validation (`@NotBlank`, `@Positive`) en los DTO.
+- **Por qué se usó:** es una concesión consciente: evita tener que crear a mano cada servicio.
+- **Qué problema trae:** los casos de uso quedan atados a Spring; en una Clean Architecture estricta, Application no conoce ningún framework.
+- **Cómo se corrige:** crear los servicios con métodos `@Bean` en una clase de configuración de la capa Api, y validar el formato en el borde (controladores).
+
+**4. URLs con verbos (estilo RPC en vez de REST)**
+- **Dónde:** `GET /convocation/getAllConvocations`, `POST /convocation/createConvocation`, `PUT /convocation/closeConvocation/{id}`...
+- **Por qué se usó:** así estaba la API original y el front ya la consumía; renombrarlas rompía el front sin mejorar ninguna regla del negocio.
+- **Qué problema trae:** repite en la URL lo que ya dice el método HTTP, las rutas son largas e inconsistentes y no se aprovechan las convenciones de REST.
+- **Cómo se corrige:** recursos en plural y el verbo en el método HTTP: `GET /convocations`, `POST /convocations`, `GET /convocations/{id}`, `POST /convocations/{id}/close`, idealmente con versión (`/api/v1/...`).
+
+**5. Un puerto con nombre de tecnología**
+- **Dónde:** `IRabbitMQSender`, en la capa Application.
+- **Por qué se usó:** el nombre venía del código original.
+- **Qué problema trae:** es una *abstracción con fugas*: el caso de uso "sabe" que existe RabbitMQ. Si se cambiara por Kafka, habría que renombrar el puerto aunque el caso de uso no cambie.
+- **Cómo se corrige:** nombrarlo por lo que hace, por ejemplo `IEventPublisher` o `INotificationPublisher`.
+
+**6. Dos dueños del esquema de la base de datos**
+- **Dónde:** `create-database.sql` crea `Requirement`, `Student`, `ConvocationType` y `Users` con sus datos; las tablas `Convocation`, `ConvocationRequirement`, `Request` y `RequestRequirement` **no están en el script**: las crea Hibernate al arrancar (`spring.jpa.hibernate.ddl-auto=update`), que también agrega columnas nuevas, como el comentario de las solicitudes.
+- **Por qué se usó:** en desarrollo es lo más rápido: se cambia una entidad y la tabla se ajusta sola.
+- **Qué problema trae:** no hay un único lugar que diga cómo es la base; `update` nunca borra columnas ni migra datos, y una base creada en otro momento puede quedar distinta.
+- **Cómo se corrige:** migraciones versionadas (Flyway o Liquibase) con todo el esquema, y `ddl-auto=validate` para que Hibernate solo compruebe.
+
+**7. Secretos en el repositorio**
+- **Dónde:** la contraseña de `sa` en `sqlserver.Dockerfile` y `application-dev.properties`, `admin` / `admin` de RabbitMQ, la clave JWT por defecto y las contraseñas de los usuarios de prueba.
+- **Por qué se usó:** para que todo el sistema arranque con un solo comando, sin configurar nada; es un proyecto académico y esos valores son solo de desarrollo.
+- **Qué problema trae:** cualquiera con acceso al repositorio conoce las claves; desplegarlo así sería inseguro.
+- **Cómo se corrige:** variables de entorno en un `.env` que no se sube, secretos del CI o de la plataforma de despliegue, y una clave JWT distinta por entorno (`JWT_SECRET`).
+
+**8. El token guardado en `localStorage` (front)**
+- **Dónde:** `utils/session.util.js` del front.
+- **Por qué se usó:** con JWT y sin sesión en el servidor, es la forma más simple de que la sesión sobreviva al recargar la página.
+- **Qué problema trae:** si la página tuviera una vulnerabilidad XSS, un script podría leer el token y suplantar al usuario.
+- **Cómo se corrige:** que el backend entregue el token en una cookie `HttpOnly`, `Secure` y `SameSite` (con protección CSRF), o guardarlo solo en memoria con un *refresh token*.
+
+**9. La topología de RabbitMQ declarada en dos lugares**
+- **Dónde:** el exchange y la cola se declaran en `RabbitMQService` (Java) y en `rabbit.constant.ts` (consumidor de Node).
+- **Por qué se usó:** cada servicio puede arrancar aunque el otro no esté.
+- **Qué problema trae:** si uno cambia el nombre o las opciones (por ejemplo `durable`), el otro falla. El nombre `event.drivent` (con un error de escritura de *driven*) está repetido en los dos, y corregirlo exige cambiar ambos a la vez.
+- **Cómo se corrige:** un solo dueño de la topología, o un contrato compartido y versionado entre los servicios.
+
+### Los que se evitaron
+
+| Antipatrón | Qué sería | Cómo se evitó |
+|---|---|---|
+| **Modelo de dominio anémico** | Entidades con solo getters y setters, y todas las reglas en los servicios | Las reglas viven en `Convocation`, `Request` y sus estados; los servicios solo coordinan. |
+| **Condicionales por estado repetidos** | `if (state == OPEN) ... else if (state == CLOSED)` en cada servicio | Patrón State: cada estado es una clase. |
+| **Base de datos compartida entre servicios** | El servicio de notificaciones leyendo la base del backend | El backend publica un evento con todo lo que el correo necesita. |
+| **Lógica de negocio en la vista** | El front decide qué se puede hacer | El front solo oculta botones como ayuda; el backend vuelve a validar todo. |
+| **Confiar en los datos del cliente** | Tomar el `studentId` del cuerpo de la petición | Se toma del token. |
+| **Excepciones tragadas** | `catch` vacíos que esconden errores | Cada error termina en un `CustomResponse` con su código; si RabbitMQ no responde, queda registrado en el log. |
+| **Esperas fijas al arrancar** | `sleep 30` antes de usar la base de datos | Healthchecks en el compose y reintentos de conexión. |
+
 ## Estructura de carpetas
 
 ```text
 clean-architecture-api/
 ├── src/main/java/com/example/demo/
 │   ├── Api/                          ← entrada HTTP
-│   │   ├── Config/                   ← ClockConfig, JacksonConfig, WebConfig, GlobalExceptionHandler
-│   │   ├── Controllers/              ← Convocation, Request, Student, Requirements, Test
+│   │   ├── Config/                   ← GlobalExceptionHandler, ClockConfig, JacksonConfig, WebConfig (CORS)
+│   │   │   └── Security/             ← SecurityConfig (reglas por rol), JwtAuthenticationFilter
+│   │   ├── Controllers/              ← Auth, Convocation, Request, Student, Requirements, Test
 │   │   └── Dtos/                     ← CustomResponse
 │   ├── Application/                  ← casos de uso
 │   │   ├── I*Service.java            ← interfaces que usan los controladores
-│   │   ├── IRabbitMQSender.java      ← puerto de mensajería
-│   │   ├── Dtos/                     ← ConvocationDto, RequestDto, StudentDto...
-│   │   ├── Exceptions/               ← NotFoundException, ConflictException
+│   │   ├── IRabbitMQSender.java, IPasswordHasher.java, ITokenProvider.java  ← puertos de salida
+│   │   ├── Dtos/                     ← ConvocationDto, RequestDto, SessionDto, AuthenticatedUserDto...
+│   │   ├── Events/                   ← RequestStatusChangedEvent
+│   │   ├── Exceptions/               ← NotFound, Conflict, Forbidden, Unauthorized
 │   │   ├── Mappers/                  ← DTO ↔ dominio
-│   │   └── Services/                 ← ConvocationService, RequestService...
+│   │   └── Services/                 ← ConvocationService, RequestService, AuthService...
 │   ├── Domain/                       ← reglas del negocio (Java puro)
-│   │   ├── Entities/                 ← Convocation, Request, Student, ConvocationRequirement...
-│   │   ├── Enums/                    ← estados, tipos y condiciones
-│   │   ├── Exceptions/               ← DomainValidationException, InvalidConvocationStateException
+│   │   ├── Entities/                 ← Convocation, Request, Student, User...
+│   │   ├── Enums/                    ← estados, tipos, condiciones y roles
+│   │   ├── Exceptions/               ← DomainValidationException y las de estado
 │   │   ├── Interfaces/               ← puertos de persistencia
-│   │   └── States/                   ← OpenState, ClosedState, FinishedState, CancelledState
+│   │   └── States/                   ← patrón State de la convocatoria y de la solicitud
 │   └── Infrastructure/               ← detalles técnicos
 │       ├── Implementations/Services/ ← RabbitMQSender, RabbitMQService
+│       ├── Security/                 ← JwtTokenProvider, BCryptPasswordHasher
 │       ├── Mappers/                  ← entidad JPA ↔ dominio
 │       └── Persistence/
 │           ├── Cruds/                ← interfaces de Spring Data
 │           ├── Entities/             ← clases @Entity
 │           └── Repositories/         ← implementaciones de los puertos
-├── src/test/java/.../Domain/         ← pruebas unitarias del dominio
+├── src/test/java/com/example/demo/   ← pruebas, en las mismas carpetas que el código que prueban
+├── src/test/resources/               ← perfil "test" (H2 en memoria para contextLoads)
 ├── diagramas/                        ← diagramas Mermaid (estados, clases, secuencia)
-├── create-database.sql               ← base de datos y datos de ejemplo
-├── docker-compose.yml                ← SQL Server + backend
+├── docker/                           ← script de arranque de SQL Server
+├── create-database.sql               ← base de datos, usuarios y datos de ejemplo
+├── docker-compose.yml                ← todo el sistema: base, RabbitMQ, Mailpit, backend, consumidor y front
 ├── Dockerfile                        ← imagen del backend
 └── sqlserver.Dockerfile              ← SQL Server con el script inicial
 ```
 
 ## Cómo agregar una funcionalidad
 
-Ejemplo: *"un estudiante puede retirar su solicitud"*. Se trabaja de adentro hacia afuera, para diseñar el dominio sin pensar en la base de datos:
+Ejemplo: *"el estudiante puede corregir los valores de su solicitud mientras está en revisión"*. Se trabaja **de adentro hacia afuera**, para diseñar la regla sin pensar todavía en la base de datos ni en HTTP:
 
-1. **Domain.** Método `withdraw()` en `Request` con su regla (solo si no está decidida). Si hace falta una consulta nueva, se agrega a `IRequestRepository`. Prueba unitaria en `src/test/.../Domain`.
-2. **Application.** `withdrawRequest(id)` en `IRequestService` y `RequestService`: cargar, llamar a `request.withdraw()`, guardar.
-3. **Infrastructure.** Implementar el método nuevo del repositorio, si lo hubo.
-4. **Api.** Endpoint en `RequestController` que solo llama al servicio.
+1. **Domain.** `Request.edit(values, requirements)` delega en su estado: `ReviewRequestState` lo permite (vuelve a validar y a verificar los requisitos) y `BaseRequestState` lo rechaza, así una solicitud aprobada o retirada no se puede editar. Prueba en `src/test/.../Domain`, con `new` y sin Spring.
+2. **Application.** `editRequest(id, dto, studentId)` en `IRequestService` y `RequestService`: cargar, comprobar que es del estudiante, llamar a `request.edit(...)`, guardar y publicar el evento si cambió de `PENDING` a `ACTIVE`. Prueba con Mockito siguiendo `StudentServiceTest`.
+3. **Infrastructure.** Solo si hace falta una consulta nueva en algún repositorio.
+4. **Api.** `PUT /request/editRequest/{id}` en `RequestController`, que solo llama al servicio, y la regla de acceso `STUDENT` en `SecurityConfig`.
+5. **Front.** El endpoint en `config/`, la función en `services/` y la pantalla (ver el [README del front](https://github.com/SemilleroSOLID/clean-architecture-front#cómo-agregar-una-pantalla)).
 
-Antes de subir el cambio se corren las tres búsquedas de [la regla de dependencias](#cómo-se-cumple-la-regla-de-dependencias). Si alguna devuelve algo, hay una dependencia en la dirección equivocada.
+Antes de subir el cambio se corren las tres búsquedas de [la regla de dependencias](#cómo-se-cumple-la-regla-de-dependencias) y `./gradlew test`. Si una búsqueda devuelve algo, hay una dependencia en la dirección equivocada.
 
 ## Endpoints
 
@@ -630,7 +752,7 @@ Salvo `/auth/login` y `/test/hello`, todos piden `Authorization: Bearer <token>`
 
 ## Cómo ejecutar todo el sistema
 
-Desde [#27](https://github.com/SemilleroSOLID/clean-architecture-api/issues/27) todo el sistema se levanta con **un solo comando**, con el `docker-compose.yml` de este repositorio.
+Todo el sistema se levanta con **un solo comando**, con el `docker-compose.yml` de este repositorio.
 
 ### Requisitos
 
@@ -676,7 +798,7 @@ flowchart LR
 
 Cómo está armado:
 
-- **Red interna:** cada servicio llama a los otros por su nombre (`sqlserver`, `rabbitmq`, `mailpit`); ya no se usa `host.docker.internal`. El navegador sí llama al backend por `localhost:3001`, por eso el front se construye con esa dirección.
+- **Red interna:** cada servicio llama a los otros por su nombre (`sqlserver`, `rabbitmq`, `mailpit`). El navegador sí llama al backend por `localhost:3001`, por eso el front se construye con esa dirección.
 - **Orden de arranque con healthchecks:** el backend espera a que SQL Server tenga la base creada y a que RabbitMQ acepte conexiones; el front espera al backend. El consumidor además reintenta la conexión cada segundo y se reinicia solo si la pierde.
 - **Datos persistentes:** SQL Server, RabbitMQ y Mailpit guardan sus datos en volúmenes. `create-database.sql` solo se ejecuta cuando la base no existe, así que reiniciar o recrear un contenedor no borra ni duplica nada. Para empezar de cero: `docker compose down -v`.
 
@@ -732,7 +854,7 @@ No necesitan SQL Server ni RabbitMQ: las pruebas unitarias simulan lo que el có
 | `RequirementVerificationTest` | Domain | 12 | Las 5 condiciones (cada una con un caso que cumple y otro que no), la comparación de números y de texto, y que la solicitud quede `ACTIVE` o `PENDING`, nunca `REJECT`. |
 | `RequestDecisionTest` | Domain | 6 | Aprobar y rechazar: justificación obligatoria, no decidir dos veces y solo con la convocatoria cerrada. |
 | `RequestStateTest` | Domain | 6 | El patrón State de la solicitud: qué permite cada estado y el retiro por el estudiante. |
-| **`StudentServiceTest`** | Application | 3 | **Prueba modelo de un servicio** ([#24](https://github.com/SemilleroSOLID/clean-architecture-api/issues/24)): consultar un estudiante, uno que no existe y la lista. |
+| **`StudentServiceTest`** | Application | 3 | **Prueba modelo de un servicio**: consultar un estudiante, uno que no existe y la lista. |
 | `AuthServiceTest` | Application | 3 | Login correcto, el mismo mensaje para contraseña incorrecta y correo inexistente (y que ambos verifiquen un hash), y el administrador sin estudiante. |
 | `RequestAccessTest` | Application | 2 | Que un estudiante no vea el historial ni el detalle de solicitudes de otro. |
 | `RabbitMQSenderTest` | Infrastructure | 3 | Que el evento se publique en el exchange, que espere al commit y que con RabbitMQ caído la operación no falle. |
@@ -807,6 +929,25 @@ void aStudentThatDoesNotExistIsANotFoundError() {
 
 El reporte de cobertura muestra en verde las líneas que alguna prueba ejecutó y en rojo las que no: sirve para encontrar qué caso falta.
 
+## Cómo contribuir
+
+Se trabaja con **fork**, así varias personas pueden hacer cambios a la vez sin pisarse:
+
+1. **Fork** de este repositorio en GitHub (botón *Fork*): la copia queda en tu cuenta personal.
+2. **Clonar tu fork** y, al lado, el front y las notificaciones (el compose los necesita), como en [Empezar rápido](#empezar-rápido) pero con `https://github.com/<tu-usuario-de-GitHub>/clean-architecture-api.git`.
+3. Agregar el repositorio original para traer sus cambios:
+
+   ```bash
+   git remote add upstream https://github.com/SemilleroSOLID/clean-architecture-api.git
+   git fetch upstream && git rebase upstream/main
+   ```
+
+4. **Una rama por tema** (`git checkout -b pruebas/convocation-service`), levantar el sistema con `docker compose up -d --build` y hacer los cambios.
+5. Antes de subir: `./gradlew test` y las búsquedas de [la regla de dependencias](#cómo-se-cumple-la-regla-de-dependencias).
+6. `git push origin <rama>` y, si quieres que el cambio llegue al repositorio principal, un **Pull Request** hacia `main` que mencione la issue (por ejemplo `#32`).
+
+Los mensajes de commit siguen el estilo del historial: en inglés y con un prefijo que dice qué tipo de cambio es (`feat:`, `fix:`, `test:`, `docs:`).
+
 ## Diagramas
 
 | Diagrama | Qué muestra |
@@ -817,24 +958,21 @@ El reporte de cobertura muestra en verde las líneas que alguna prueba ejecutó 
 
 Están escritos en [Mermaid](https://mermaid.js.org/): GitHub los dibuja directamente y se editan como texto.
 
-## Estado del proyecto
+## Qué falta
 
-El trabajo se organiza en [issues](https://github.com/SemilleroSOLID/clean-architecture-api/issues) por fases.
+Las cuatro fases del backlog (convocatorias, solicitudes, gestión y notificaciones, autenticación) están terminadas. Queda la fase de calidad:
 
-| Fase | Contenido | Estado |
+| Issue | Qué falta | Quién |
 |---|---|---|
-| 1 · Convocatorias (CU-001) | Crear, consultar, editar, eliminar y listar; validaciones; refactor a Clean Architecture; diagrama de estados. | ✅ Terminada |
-| 2 · Solicitudes (CU-002) | Estudiantes, creación de solicitudes, verificación automática de requisitos y formulario de postulación en el front. | ✅ Terminada |
-| 3 · Gestión y notificaciones | Ver, aprobar y rechazar solicitudes, historial y retiro del estudiante, eventos en RabbitMQ y correo real al estudiante. | ✅ Terminada |
-| 4 · Autenticación y roles | JWT con roles Administrador y Estudiante en el backend, login, menú por rol y rutas protegidas en el front. | ✅ Terminada |
-| 5 · Calidad y despliegue | Patrón State, Docker Compose único ([#27](https://github.com/SemilleroSOLID/clean-architecture-api/issues/27)) y prueba modelo de servicios ([#24](https://github.com/SemilleroSOLID/clean-architecture-api/issues/24)) listos. Faltan las pruebas de los demás servicios (issues abiertas #32 a #35), pruebas de integración, GitHub Actions y los diagramas por capas, de despliegue y entidad-relación. | 🔄 En curso |
+| [#28](https://github.com/SemilleroSOLID/clean-architecture-api/issues/28) | Diagramas de secuencia por capas (mostrando el dominio), de despliegue y entidad-relación. | Asignada |
+| [#25](https://github.com/SemilleroSOLID/clean-architecture-api/issues/25) | Base de las pruebas de integración con Testcontainers y dos ejemplos. | Asignada |
+| [#26](https://github.com/SemilleroSOLID/clean-architecture-api/issues/26) | GitHub Actions: compilar y correr las pruebas en cada push. | Asignada |
+| [#32](https://github.com/SemilleroSOLID/clean-architecture-api/issues/32) | Pruebas de `ConvocationService`. | Abierta: cualquiera, en su fork |
+| [#33](https://github.com/SemilleroSOLID/clean-architecture-api/issues/33) | Pruebas de `RequestService`. | Abierta: cualquiera, en su fork |
+| [#34](https://github.com/SemilleroSOLID/clean-architecture-api/issues/34) | Pruebas de `RequirementService`, `AuthService` y los mappers. | Abierta: cualquiera, en su fork |
+| [#35](https://github.com/SemilleroSOLID/clean-architecture-api/issues/35) | Pruebas de integración de los demás flujos (después de #25). | Abierta: cualquiera, en su fork |
 
-Al terminar el backlog la estructura de capas será la misma; crece el contenido de cada una:
-
-- **Domain:** ya tiene la verificación de requisitos y los estados de la solicitud con el patrón State.
-- **Application:** ya publica un evento en cada cambio de estado de una solicitud y tiene el login.
-- **Infrastructure:** ya tiene BCrypt y JWT.
-- **Api:** los endpoints ya están protegidos por rol. El dominio no sabe quién está autenticado: recibe el id del estudiante como un dato más.
+Todas las issues están en el [tablero del proyecto](https://github.com/orgs/SemilleroSOLID/projects/12) y en [GitHub](https://github.com/SemilleroSOLID/clean-architecture-api/issues).
 
 ---
 
