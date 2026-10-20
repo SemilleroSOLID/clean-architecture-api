@@ -6,6 +6,7 @@ import com.example.demo.Domain.Exceptions.DomainValidationException;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,6 +53,24 @@ public class Request implements Serializable {
         if (!errors.isEmpty()) {
             throw new DomainValidationException(errors);
         }
+    }
+
+    /**
+     * Automatic verification (issue #14): the request is ACTIVE when every requirement is met and PENDING
+     * otherwise. It is never rejected automatically; an administrator decides the pending ones.
+     * Call it after {@link #validateAgainst}, so every requirement has exactly one value.
+     *
+     * @return the convocation requirements the student does not meet, empty when all are met
+     */
+    public List<ConvocationRequirement> verifyRequirements(List<ConvocationRequirement> convocationRequirements) {
+        Map<Integer, String> valueByRequirement = new HashMap<>();
+        requirements.forEach(answer -> valueByRequirement.put(answer.getConvocationRequirementId(), answer.getValue()));
+
+        List<ConvocationRequirement> unmet = convocationRequirements.stream()
+                .filter(requirement -> !requirement.isMetBy(valueByRequirement.get(requirement.getId())))
+                .toList();
+        state = unmet.isEmpty() ? EnumStateRequest.ACTIVE : EnumStateRequest.PENDING;
+        return unmet;
     }
 
     public int getId() {

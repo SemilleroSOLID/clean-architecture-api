@@ -6,9 +6,9 @@ import com.example.demo.Application.Exceptions.NotFoundException;
 import com.example.demo.Application.IRequestService;
 import com.example.demo.Application.Mappers.RequestMapper;
 import com.example.demo.Domain.Entities.Convocation;
+import com.example.demo.Domain.Entities.ConvocationRequirement;
 import com.example.demo.Domain.Entities.Request;
 import com.example.demo.Domain.Entities.RequestRequirement;
-import com.example.demo.Domain.Enums.EnumStateRequest;
 import com.example.demo.Domain.Interfaces.IConvocationRepository;
 import com.example.demo.Domain.Interfaces.IConvocationRequirementRepository;
 import com.example.demo.Domain.Interfaces.IRequestRepository;
@@ -55,15 +55,18 @@ public class RequestService implements IRequestService {
         }
 
         Request request = this.requestMapper.toDomain(requestDto);
-        request.validateAgainst(this.convocationRequirementRepository.findConvocationRequirements(convocation.getId()));
+        List<ConvocationRequirement> convocationRequirements = this.convocationRequirementRepository.findConvocationRequirements(convocation.getId());
+        request.validateAgainst(convocationRequirements);
         request.setCreationDate(today);
-        // Until the automatic verification of #14 exists, every request waits for a decision.
-        request.setState(EnumStateRequest.PENDING);
+        List<ConvocationRequirement> unmetRequirements = request.verifyRequirements(convocationRequirements);
 
         Request createdRequest = this.requestRepository.save(request);
         List<RequestRequirement> requirements = request.getRequirements();
         requirements.forEach(requirement -> requirement.setRequestId(createdRequest.getId()));
         createdRequest.setRequirements(this.requestRequirementRepository.saveAll(requirements));
-        return this.requestMapper.toDto(createdRequest);
+
+        RequestDto createdRequestDto = this.requestMapper.toDto(createdRequest);
+        createdRequestDto.setUnmetRequirements(this.requestMapper.toUnmetDtos(unmetRequirements, createdRequest));
+        return createdRequestDto;
     }
 }

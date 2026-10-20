@@ -177,6 +177,7 @@ classDiagram
         -int requirementId
         -int convocationId
         +validate(catalog, field, errors)
+        +isMetBy(value) boolean
     }
     class Requirement {
         -int id
@@ -202,6 +203,7 @@ classDiagram
         -LocalDate creationDate
         -EnumStateRequest state
         +validateAgainst(convocationRequirements)
+        +verifyRequirements(convocationRequirements) List
     }
     class RequestRequirement {
         -int id
@@ -261,11 +263,11 @@ classDiagram
 | Clase | Qué es | Reglas que tiene |
 |---|---|---|
 | `Convocation` | Una convocatoria publicada por el administrador (monitoría, beca o residencia). | Fechas válidas, requisitos válidos, no cambiar las reglas si ya hay solicitudes, y todo lo que depende del estado (lo resuelve el patrón State). |
-| `ConvocationRequirement` | Un requisito concreto de una convocatoria, por ejemplo "Promedio mayor o igual a 4.0". | El tipo de requisito debe existir, el valor debe ser mayor a 0 y, si es una nota, numérico y no mayor a 5.0. |
+| `ConvocationRequirement` | Un requisito concreto de una convocatoria, por ejemplo "Promedio mayor o igual a 4.0". | El tipo de requisito debe existir, el valor debe ser mayor a 0 y, si es una nota, numérico y no mayor a 5.0. `isMetBy` compara el valor del estudiante con la condición: como número si los dos son números y, si no, solo `EQUAL` como texto sin mayúsculas. |
 | `Requirement` | El catálogo de tipos de requisito (Promedio, Estrato, Semestres...). | `grade` indica si el valor es una nota de 0 a 5. |
 | `ConvocationType` | El catálogo de tipos de convocatoria que viene de la base de datos. | Su id coincide con `EnumConvocationType`. |
-| `Student` | El estudiante que se postula. | Por ahora solo datos; la verificación de requisitos llega con [#14](https://github.com/SemilleroSOLID/clean-architecture-api/issues/14). |
-| `Request` | La solicitud de un estudiante a una convocatoria. | Debe responder todos los requisitos de la convocatoria, sin repetir ni agregar requisitos ajenos. |
+| `Student` | El estudiante que se postula. | Por ahora solo datos. |
+| `Request` | La solicitud de un estudiante a una convocatoria. | Debe responder todos los requisitos de la convocatoria, sin repetir ni agregar requisitos ajenos. Al crearla queda `ACTIVE` si cumple todos o `PENDING` si no; nunca se rechaza automáticamente. |
 | `RequestRequirement` | El valor que el estudiante entrega para un requisito, con su adjunto opcional. | — |
 
 Las relaciones entre entidades se guardan por id (`convocationId`, `studentId`) y no como objetos anidados de JPA. Así el dominio no depende de cómo se cargan los datos, y cada servicio decide qué necesita consultar.
@@ -280,7 +282,6 @@ Las clases nuevas siguen el mismo molde, así que el diagrama por capas no cambi
 
 | Issue | Qué agrega | Capa |
 |---|---|---|
-| [#14](https://github.com/SemilleroSOLID/clean-architecture-api/issues/14) | Método en `Request` (o un servicio de dominio) que compara los valores con los requisitos y deja la solicitud `ACTIVE` o `PENDING`. | Domain |
 | [#16](https://github.com/SemilleroSOLID/clean-architecture-api/issues/16), [#18](https://github.com/SemilleroSOLID/clean-architecture-api/issues/18) | Consultas de solicitudes para el administrador y el historial del estudiante. | Application, Infrastructure |
 | [#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17), [#19](https://github.com/SemilleroSOLID/clean-architecture-api/issues/19) | Aprobar, rechazar y retirar solicitudes; los estados de la solicitud pueden usar el mismo patrón State. | Domain, Application |
 | [#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20) | Un puerto `INotificationPublisher` en Application implementado con RabbitMQ en Infrastructure, igual que hoy `IRabbitMQSender`. | Application, Infrastructure |

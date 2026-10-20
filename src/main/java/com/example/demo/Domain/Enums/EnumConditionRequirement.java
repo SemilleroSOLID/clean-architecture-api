@@ -20,6 +20,18 @@ public enum EnumConditionRequirement {
         this.value = value;
     }
 
+    /** Whether the value the student gave satisfies this condition against the required value. */
+    public boolean isSatisfied(double actual, double required) {
+        int comparison = Double.compare(actual, required);
+        return switch (this) {
+            case EQUAL -> comparison == 0;
+            case LESS_OR_EQUAL -> comparison <= 0;
+            case GREATER_OR_EQUAL -> comparison >= 0;
+            case LESS -> comparison < 0;
+            case GREATER -> comparison > 0;
+        };
+    }
+
     public static EnumConditionRequirement fromValue(int value) {
         for (EnumConditionRequirement state : values()) {
             if (state.value == value) {

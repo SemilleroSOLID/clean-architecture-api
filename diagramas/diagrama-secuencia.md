@@ -138,13 +138,20 @@ sequenceDiagram
     Repos-->>Svc: lista de ConvocationRequirement
     Svc->>Req: validateAgainst(requisitos)
     Note over Req: Falta un requisito, está repetido<br/>o no es de esta convocatoria → 400
-    Svc->>Req: setCreationDate(hoy), setState(PENDING)
+    Svc->>Req: setCreationDate(hoy)
+    Svc->>Req: verifyRequirements(requisitos)
+    Note over Req: Compara cada valor con su condición.<br/>Cumple todos → ACTIVE · si no → PENDING<br/>Nunca REJECT
+    Req-->>Svc: requisitos no cumplidos
     Svc->>Repos: requestRepository.save(request)
     Repos->>DB: INSERT Request
     Svc->>Repos: requestRequirementRepository.saveAll(respuestas)
     Repos->>DB: INSERT RequestRequirement
-    Svc-->>Ctrl: RequestDto
-    Ctrl-->>Est: 200 "Solicitud creada"
+    Svc-->>Ctrl: RequestDto con state y unmetRequirements
+    alt Cumple todos
+        Ctrl-->>Est: 200 "Su solicitud ha sido creada exitosamente..."
+    else No cumple alguno
+        Ctrl-->>Est: 200 "...está pendiente de aprobación aunque no cumples con todos los requisitos"
+    end
 ```
 
 Las flechas que terminan en una excepción cortan el flujo: no se ejecuta nada de lo que sigue. Como todas las comprobaciones van antes del primer `INSERT`, una solicitud inválida nunca llega a la base de datos, y si algo falla al guardar los requisitos, `@Transactional` deshace también la solicitud.

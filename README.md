@@ -140,7 +140,7 @@ flowchart TB
 
 Lo que se gana:
 
-- **El negocio se prueba sin base de datos ni servidor.** Las 37 pruebas del dominio corren en milisegundos con JUnit, sin levantar Spring.
+- **El negocio se prueba sin base de datos ni servidor.** Las 48 pruebas del dominio corren en milisegundos con JUnit, sin levantar Spring.
 - **Los cambios de tecnología quedan aislados.** Cambiar la base de datos implica reescribir Infrastructure; el dominio y los casos de uso no se tocan.
 - **Cada regla vive en un solo lugar.** Para cambiar cuándo se cierra una convocatoria se abre `OpenState.java`, no hay condicionales repartidos por los servicios.
 
@@ -167,7 +167,7 @@ No depende de nada: ni Spring, ni JPA, ni Jackson. Solo Java.
 
 | Contiene | Ejemplo |
 |---|---|
-| Entidades con reglas | `Convocation.validate(today, catalog)` revisa fechas y requisitos. `Request.validateAgainst(requirements)` revisa que la solicitud responda todos los requisitos. |
+| Entidades con reglas | `Convocation.validate(today, catalog)` revisa fechas y requisitos. `Request.validateAgainst(requirements)` revisa que la solicitud responda todos los requisitos y `Request.verifyRequirements(requirements)` la deja `ACTIVE` o `PENDING` según los cumpla. |
 | Enums del negocio | `EnumConvocationState`, `EnumStateRequest`, `EnumConvocationType`, `EnumConditionRequirement`. |
 | Patrón State | `Domain/States/`, una clase por estado de la convocatoria. |
 | Excepciones de negocio | `DomainValidationException` (mapa campo → mensaje) e `InvalidConvocationStateException`. |
@@ -477,7 +477,7 @@ Base: `http://localhost:3001/ms-logica-negocio/api`. Todas las respuestas tienen
 | GET | `/requirements/getAllConditionRequirements` | Condiciones (igual, mayor o igual...). |
 | GET | `/student/getAllStudents` | Lista de estudiantes. |
 | GET | `/student/getStudentById/{id}` | Detalle de un estudiante. |
-| POST | `/request/createRequest` | Crea la solicitud de un estudiante. |
+| POST | `/request/createRequest` | Crea la solicitud de un estudiante y verifica sus requisitos: queda `ACTIVE` si los cumple todos o `PENDING` si no, con la lista de los que no cumple. |
 | GET | `/test/hello` | Comprueba que el servidor responde. |
 
 </details>
@@ -554,6 +554,7 @@ Dentro de Docker Compose el backend usa `sqlserver:1433` y llega a RabbitMQ por 
 | `ConvocationValidationTest` | 10 | Reglas de fechas y requisitos al crear y editar. |
 | `ConvocationStateTest` | 21 | Cada transición válida e inválida de los cuatro estados, el cierre automático y la regla de no cambiar requisitos con solicitudes. |
 | `RequestValidationTest` | 6 | Que una solicitud responda todos los requisitos, sin repetidos ni ajenos. |
+| `RequirementVerificationTest` | 11 | Las 5 condiciones (cada una con un caso que cumple y otro que no), la comparación de números y de texto, y que la solicitud quede `ACTIVE` o `PENDING`, nunca `REJECT`. |
 
 Las pruebas crean los objetos con `new`, sin Spring ni base de datos. Que se pueda probar así es una de las señales más claras de que el dominio está bien aislado.
 
@@ -574,7 +575,7 @@ El trabajo se organiza en [issues](https://github.com/SemilleroSOLID/clean-archi
 | Fase | Contenido | Estado |
 |---|---|---|
 | 1 · Convocatorias (CU-001) | Crear, consultar, editar, eliminar y listar; validaciones; refactor a Clean Architecture; diagrama de estados. | ✅ Terminada |
-| 2 · Solicitudes (CU-002) | Estudiantes y creación de solicitudes listos. Faltan la verificación automática de requisitos (#14) y el formulario del front (#15). | 🔄 En curso |
+| 2 · Solicitudes (CU-002) | Estudiantes, creación de solicitudes y verificación automática de requisitos listos. Falta el formulario del front (#15). | 🔄 En curso |
 | 3 · Gestión y notificaciones | Ver, aprobar y rechazar solicitudes, historial y retiro del estudiante, eventos en RabbitMQ, correo real. | ⏳ Pendiente |
 | 4 · Autenticación y roles | JWT con roles Administrador y Estudiante, login y rutas protegidas. | ⏳ Pendiente |
 | 5 · Calidad y despliegue | Patrón State listo. Faltan pruebas con Mockito, pruebas de integración, GitHub Actions, Docker Compose único y diagramas de despliegue y entidad-relación. | 🔄 En curso |

@@ -2,9 +2,15 @@ package com.example.demo.Application.Mappers;
 
 import com.example.demo.Application.Dtos.RequestDto;
 import com.example.demo.Application.Dtos.RequestRequirementDto;
+import com.example.demo.Application.Dtos.UnmetRequirementDto;
+import com.example.demo.Domain.Entities.ConvocationRequirement;
 import com.example.demo.Domain.Entities.Request;
 import com.example.demo.Domain.Entities.RequestRequirement;
 import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Component
 public class RequestMapper {
@@ -29,6 +35,16 @@ public class RequestMapper {
         requestDto.setState(request.getState());
         requestDto.setRequirements(request.getRequirements().stream().map(this::toDto).toList());
         return requestDto;
+    }
+
+    /** Unmet requirements with the value the student gave for each one. */
+    public List<UnmetRequirementDto> toUnmetDtos(List<ConvocationRequirement> unmetRequirements, Request request) {
+        Map<Integer, String> valueByRequirement = new HashMap<>();
+        request.getRequirements().forEach(answer -> valueByRequirement.put(answer.getConvocationRequirementId(), answer.getValue()));
+        return unmetRequirements.stream()
+                .map(requirement -> new UnmetRequirementDto(requirement.getId(), requirement.getName(),
+                        requirement.getConditional(), requirement.getRequiredValue(), valueByRequirement.get(requirement.getId())))
+                .toList();
     }
 
     private RequestRequirementDto toDto(RequestRequirement requestRequirement) {

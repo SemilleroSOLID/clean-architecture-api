@@ -21,8 +21,18 @@ public class RequestDto implements Serializable {
     @NotNull(message = "Los valores de los requisitos son obligatorios")
     @Valid
     private List<RequestRequirementDto> requirements = new ArrayList<>();
+    // Only in the response: result of the automatic verification (issue #14).
+    private List<UnmetRequirementDto> unmetRequirements = new ArrayList<>();
 
     public RequestDto() {}
+
+    public List<UnmetRequirementDto> getUnmetRequirements() {
+        return unmetRequirements;
+    }
+
+    public void setUnmetRequirements(List<UnmetRequirementDto> unmetRequirements) {
+        this.unmetRequirements = unmetRequirements;
+    }
 
     public int getId() {
         return id;

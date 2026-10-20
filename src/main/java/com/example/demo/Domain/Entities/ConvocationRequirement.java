@@ -48,6 +48,22 @@ public class ConvocationRequirement implements Serializable {
         }
     }
 
+    /**
+     * CU-002 step 9: compares the value the student gave with the required value using the condition.
+     * Two numbers are compared as numbers; otherwise only EQUAL can be met, comparing the text without case.
+     */
+    public boolean isMetBy(String value) {
+        if (value == null || conditional == null) return false;
+        Double actualNumber = parseNumber(value);
+        Double requiredNumber = parseNumber(requiredValue);
+        if (actualNumber != null && requiredNumber != null) {
+            return conditional.isSatisfied(actualNumber, requiredNumber);
+        }
+        return conditional == EnumConditionRequirement.EQUAL
+                && requiredValue != null
+                && value.trim().equalsIgnoreCase(requiredValue.trim());
+    }
+
     private static Double parseNumber(String value) {
         if (value == null) return null;
         try {
