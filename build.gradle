@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.2.5'
 	id 'io.spring.dependency-management' version '1.1.4'
+	id 'jacoco'
 }
 
 group = 'com.example'
@@ -27,6 +28,8 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	// Only for contextLoads in the "test" profile (issue #24)
+	testRuntimeOnly 'com.h2database:h2'
 
 	//sql server
 	runtimeOnly 'com.microsoft.sqlserver:mssql-jdbc'
@@ -39,4 +42,26 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+// Coverage (issue #24): ./gradlew test jacocoTestReport -> build/reports/jacoco/test/html/index.html
+jacoco {
+	toolVersion = '0.8.12'
+}
+
+jacocoTestReport {
+	dependsOn test
+	reports {
+		html.required = true
+		xml.required = true
+	}
+	// Only the code with logic: JPA entities, configuration and the main class add nothing to the report
+	afterEvaluate {
+		classDirectories.setFrom(files(classDirectories.files.collect {
+			fileTree(dir: it, exclude: [
+					'com/example/demo/Infrastructure/Persistence/Entities/**',
+					'com/example/demo/ServiciosUcaldasLogicaNegocioApplication*'
+			])
+		}))
+	}
 }

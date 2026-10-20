@@ -718,23 +718,94 @@ Dentro de Docker Compose el backend usa `sqlserver:1433` y `rabbitmq:5672`. La z
 ## Pruebas
 
 ```bash
-./gradlew test
+./gradlew test                     # todas las pruebas, sin Docker
+./gradlew test jacocoTestReport    # y el reporte de cobertura en build/reports/jacoco/test/html/index.html
 ```
 
-| Clase | Pruebas | Qué cubre |
-|---|:-:|---|
-| `ConvocationValidationTest` | 10 | Reglas de fechas y requisitos al crear y editar. |
-| `ConvocationStateTest` | 21 | Cada transición válida e inválida de los cuatro estados, el cierre automático y la regla de no cambiar requisitos con solicitudes. |
-| `RequestValidationTest` | 6 | Que una solicitud responda todos los requisitos, sin repetidos ni ajenos. |
-| `RequirementVerificationTest` | 12 | Las 5 condiciones (cada una con un caso que cumple y otro que no), la comparación de números y de texto, y que la solicitud quede `ACTIVE` o `PENDING`, nunca `REJECT`. |
-| `RequestDecisionTest` | 6 | Aprobar y rechazar: justificación obligatoria, no decidir dos veces y solo con la convocatoria cerrada. |
-| `RequestStateTest` | 6 | El patrón State de la solicitud: qué permite cada estado y el retiro por el estudiante. |
-| `RabbitMQSenderTest` | 3 | Que el evento se publique en el exchange, que espere al commit y que con RabbitMQ caído la operación no falle. |
-| `AuthServiceTest` | 3 | Login correcto, el mismo mensaje para contraseña incorrecta y correo inexistente (y que ambos verifiquen un hash), y el administrador sin estudiante. |
-| `JwtTokenProviderTest` | 4 | Que el token lleve el usuario y venza a las 8 horas, y que se rechace uno vencido, alterado o firmado con otra clave. |
-| `RequestAccessTest` | 2 | Que un estudiante no vea el historial ni el detalle de solicitudes de otro. |
+No necesitan SQL Server ni RabbitMQ: las pruebas unitarias simulan lo que el código usa de afuera, y `contextLoads` arranca Spring con el perfil `test` (`src/test/resources/application-test.properties`), que usa una base H2 en memoria solo para comprobar que la aplicación se puede armar. Las pruebas contra un SQL Server real son las de integración ([#25](https://github.com/SemilleroSOLID/clean-architecture-api/issues/25)).
+
+| Clase | Capa | Pruebas | Qué cubre |
+|---|---|:-:|---|
+| `ConvocationValidationTest` | Domain | 10 | Reglas de fechas y requisitos al crear y editar. |
+| `ConvocationStateTest` | Domain | 21 | Cada transición válida e inválida de los cuatro estados, el cierre automático y la regla de no cambiar requisitos con solicitudes. |
+| `RequestValidationTest` | Domain | 6 | Que una solicitud responda todos los requisitos, sin repetidos ni ajenos. |
+| `RequirementVerificationTest` | Domain | 12 | Las 5 condiciones (cada una con un caso que cumple y otro que no), la comparación de números y de texto, y que la solicitud quede `ACTIVE` o `PENDING`, nunca `REJECT`. |
+| `RequestDecisionTest` | Domain | 6 | Aprobar y rechazar: justificación obligatoria, no decidir dos veces y solo con la convocatoria cerrada. |
+| `RequestStateTest` | Domain | 6 | El patrón State de la solicitud: qué permite cada estado y el retiro por el estudiante. |
+| **`StudentServiceTest`** | Application | 3 | **Prueba modelo de un servicio** ([#24](https://github.com/SemilleroSOLID/clean-architecture-api/issues/24)): consultar un estudiante, uno que no existe y la lista. |
+| `AuthServiceTest` | Application | 3 | Login correcto, el mismo mensaje para contraseña incorrecta y correo inexistente (y que ambos verifiquen un hash), y el administrador sin estudiante. |
+| `RequestAccessTest` | Application | 2 | Que un estudiante no vea el historial ni el detalle de solicitudes de otro. |
+| `RabbitMQSenderTest` | Infrastructure | 3 | Que el evento se publique en el exchange, que espere al commit y que con RabbitMQ caído la operación no falle. |
+| `JwtTokenProviderTest` | Infrastructure | 4 | Que el token lleve el usuario y venza a las 8 horas, y que se rechace uno vencido, alterado o firmado con otra clave. |
+| `ServiciosUcaldasLogicaNegocioApplicationTests` | Todas | 1 | `contextLoads`: que Spring pueda crear todos los componentes. |
 
 Las pruebas del dominio crean los objetos con `new`, sin Spring ni base de datos; las de los servicios y el publicador usan repositorios y un `RabbitTemplate` simulados con Mockito. Que se pueda probar así es una de las señales más claras de que el dominio está bien aislado.
+
+### Cómo escribir una prueba de servicio
+
+Las pruebas de los servicios se escriben **una clase por servicio**. Como ejemplo está hecha la de `StudentService`; las de los demás servicios las completan los estudiantes del semillero siguiendo ese modelo:
+
+| Issue | Servicio | Cobertura hoy |
+|---|---|:-:|
+| [#32](https://github.com/SemilleroSOLID/clean-architecture-api/issues/32) | `ConvocationService` | 1 % |
+| [#33](https://github.com/SemilleroSOLID/clean-architecture-api/issues/33) | `RequestService` | 8 % |
+| [#34](https://github.com/SemilleroSOLID/clean-architecture-api/issues/34) | `RequirementService`, `AuthService` y los mappers | 11 % / 100 % |
+
+**1. Crear la clase** en `src/test/java/com/example/demo/Application/Services/`, con el nombre del servicio terminado en `Test`:
+
+```java
+@ExtendWith(MockitoExtension.class)
+class ConvocationServiceTest {
+
+    @Mock                                   // lo que el servicio usa de afuera: se simula
+    private IConvocationRepository convocationRepository;
+
+    @Spy                                    // clases simples sin dependencias: se usa la real
+    private ConvocationMapper convocationMapper = new ConvocationMapper();
+
+    @InjectMocks                            // la clase que se prueba, con los simulados adentro
+    private ConvocationService convocationService;
+}
+```
+
+**2. Cada prueba tiene tres partes**, separadas con un comentario:
+
+```java
+@Test
+void aStudentThatDoesNotExistIsANotFoundError() {
+    // Arrange (preparar): qué responden los simulados en este caso
+    when(studentRepository.findById(99)).thenReturn(Optional.empty());
+
+    // Act (ejecutar) y Assert (verificar)
+    NotFoundException error = assertThrows(NotFoundException.class, () -> studentService.getStudentById(99));
+    assertEquals("No existe un estudiante con id 99", error.getMessage());
+}
+```
+
+**3. El nombre dice qué se comprueba:** *situación + resultado esperado*, por ejemplo `aClosedConvocationCannotBeEdited`. Una prueba revisa un solo comportamiento.
+
+**4. Técnicas que se necesitan y dónde verlas** en las pruebas que ya existen:
+
+| Necesito... | Cómo | Ejemplo |
+|---|---|---|
+| Que un repositorio devuelva algo | `when(repo.findById(1)).thenReturn(Optional.of(...))` | `StudentServiceTest` |
+| Comprobar que se lanza una excepción | `assertThrows(NotFoundException.class, () -> ...)` | `StudentServiceTest` |
+| Comprobar que se llamó a un método | `verify(repo).findAll()` | `StudentServiceTest` |
+| Comprobar que **no** se guardó o publicó nada | `verify(repo, never()).save(any())` | `RabbitMQSenderTest`, `AuthServiceTest` |
+| Fijar la fecha de "hoy" | `Clock.fixed(Instant.parse("2026-10-20T05:00:00Z"), ZoneOffset.UTC)` | `JwtTokenProviderTest` |
+| Revisar el objeto que se envió (por ejemplo, el evento) | `ArgumentCaptor<RequestStatusChangedEvent>` + `verify(sender).publishRequestStatusChanged(captor.capture())` | Mockito: `ArgumentCaptor` |
+| Probar un servicio con varias dependencias | `@Mock` de cada repositorio + `@InjectMocks` | `RequestAccessTest` |
+
+`ConvocationService` y `RequestService` saben la fecha de hoy por un `Clock`. En la prueba se declara `@Spy private Clock clock = Clock.fixed(Instant.parse("2026-10-20T12:00:00Z"), ZoneOffset.UTC);` y `@InjectMocks` se lo entrega al servicio, igual que los repositorios simulados: así la prueba da el mismo resultado cualquier día.
+
+**5. Correr solo esa clase** mientras se escribe, y al final todas:
+
+```bash
+./gradlew test --tests "*ConvocationServiceTest"
+./gradlew test jacocoTestReport
+```
+
+El reporte de cobertura muestra en verde las líneas que alguna prueba ejecutó y en rojo las que no: sirve para encontrar qué caso falta.
 
 ## Diagramas
 
@@ -756,7 +827,7 @@ El trabajo se organiza en [issues](https://github.com/SemilleroSOLID/clean-archi
 | 2 · Solicitudes (CU-002) | Estudiantes, creación de solicitudes, verificación automática de requisitos y formulario de postulación en el front. | ✅ Terminada |
 | 3 · Gestión y notificaciones | Ver, aprobar y rechazar solicitudes, historial y retiro del estudiante, eventos en RabbitMQ y correo real al estudiante. | ✅ Terminada |
 | 4 · Autenticación y roles | JWT con roles Administrador y Estudiante en el backend, login, menú por rol y rutas protegidas en el front. | ✅ Terminada |
-| 5 · Calidad y despliegue | Patrón State y Docker Compose único ([#27](https://github.com/SemilleroSOLID/clean-architecture-api/issues/27)) listos. Faltan pruebas con Mockito, pruebas de integración, GitHub Actions y diagramas de despliegue y entidad-relación. | 🔄 En curso |
+| 5 · Calidad y despliegue | Patrón State, Docker Compose único ([#27](https://github.com/SemilleroSOLID/clean-architecture-api/issues/27)) y prueba modelo de servicios ([#24](https://github.com/SemilleroSOLID/clean-architecture-api/issues/24)) listos. Faltan las pruebas de los demás servicios (estudiantes, #32 a #34), pruebas de integración, GitHub Actions y los diagramas por capas, de despliegue y entidad-relación. | 🔄 En curso |
 
 Al terminar el backlog la estructura de capas será la misma; crece el contenido de cada una:
 
