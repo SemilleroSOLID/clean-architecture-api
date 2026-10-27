@@ -68,6 +68,10 @@ public abstract class IntegrationTest {
                 : new GenericContainer<>(new ImageFromDockerfile(SQL_SERVER_IMAGE, false)
                         .withDockerfile(Path.of("sqlserver.Dockerfile").toAbsolutePath()));
         return container
+                // The image carries the labels of docker compose: without overriding them, Docker Desktop and
+                // "docker compose" would take this container as part of the compose project
+                .withLabel("com.docker.compose.project", "")
+                .withLabel("com.docker.compose.service", "")
                 .withExposedPorts(1433)
                 // Ready when create-database.sql finished: its last step loads the three convocation types
                 // (the same idea as the healthcheck of docker-compose.yml)
@@ -78,6 +82,8 @@ public abstract class IntegrationTest {
 
     static {
         SQL_SERVER.start();
+        // Removed when the tests end; Testcontainers also does it, this makes it certain
+        Runtime.getRuntime().addShutdownHook(new Thread(SQL_SERVER::stop));
     }
 
     @DynamicPropertySource
