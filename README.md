@@ -499,7 +499,7 @@ Paso a paso:
 5. **Infrastructure.** El servicio guarda con `IConvocationRepository.save(...)`.
 6. **Api.** El controlador responde `200` con un `CustomResponse`. Si hubo una excepción, `GlobalExceptionHandler` responde 400, 404 o 409.
 
-Los recorridos de los demás casos de uso, con sus errores, están en [diagramas/diagrama-secuencia.md](diagramas/diagrama-secuencia.md).
+Los recorridos de los seis casos de uso (crear convocatoria, cambiar su estado, crear, decidir y retirar una solicitud, e iniciar sesión), con las mismas cajas por capa y sus errores, están en [diagramas/diagrama-secuencia.md](diagramas/diagrama-secuencia.md).
 
 ## Eventos de notificación
 
@@ -797,7 +797,7 @@ clean-architecture-api/
 │           └── Repositories/         ← implementaciones de los puertos
 ├── src/test/java/com/example/demo/   ← pruebas, en las mismas carpetas que el código que prueban
 ├── src/test/resources/               ← perfil "test" (H2 en memoria para contextLoads)
-├── diagramas/                        ← diagramas Mermaid (estados, clases, secuencia)
+├── diagramas/                        ← diagramas Mermaid (secuencia, clases, estados, entidad-relación, despliegue)
 ├── docker/                           ← script de arranque de SQL Server
 ├── create-database.sql               ← base de datos, usuarios y datos de ejemplo
 ├── docker-compose.yml                ← todo el sistema: base, RabbitMQ, Mailpit, backend, consumidor y front
@@ -1127,19 +1127,20 @@ Los mensajes de commit siguen el estilo del historial: en inglés y con un prefi
 
 | Diagrama | Qué muestra |
 |---|---|
+| [Secuencia por capas](diagramas/diagrama-secuencia.md) | Los seis casos de uso (crear convocatoria, cambiar su estado, crear, aprobar o rechazar y retirar una solicitud, iniciar sesión) con cajas Api, Application, **Domain** e Infrastructure, el camino feliz y los errores del dominio. |
+| [Clases](diagramas/diagrama-clases.md) | La convocatoria en las cuatro capas, el modelo de dominio con los usuarios, los estados y eventos de la solicitud y la seguridad con puertos y adaptadores. |
 | [Estados de la convocatoria](diagramas/estados-convocatoria.md) | Ciclo de vida, acciones por estado, decisiones del equipo y el patrón State. |
-| [Clases](diagramas/diagrama-clases.md) | Las clases de la convocatoria en las cuatro capas y el modelo de dominio. |
-| [Secuencia](diagramas/diagrama-secuencia.md) | Crear convocatoria, cambiar estado, crear solicitud y aprobar o rechazar con la notificación por RabbitMQ. |
+| [Entidad-relación](diagramas/diagrama-entidad-relacion.md) | Las tablas de SQL Server, sus llaves y qué relaciones son llaves foráneas reales y cuáles mantiene la aplicación. |
+| [Despliegue](diagramas/diagrama-despliegue.md) | Los seis contenedores del Docker Compose, sus puertos, volúmenes y conexiones. |
 
-Están escritos en [Mermaid](https://mermaid.js.org/): GitHub los dibuja directamente y se editan como texto.
+Están escritos en [Mermaid](https://mermaid.js.org/): GitHub los dibuja directamente y se editan como texto. También están publicados en la [Wiki](https://github.com/SemilleroSOLID/clean-architecture-api/wiki), una página por diagrama.
 
 ## Qué falta
 
-Las cuatro fases del backlog (convocatorias, solicitudes, gestión y notificaciones, autenticación) están terminadas. Queda la fase de calidad:
+Las cuatro fases del backlog (convocatorias, solicitudes, gestión y notificaciones, autenticación) y la fase de calidad (pruebas de ejemplo, integración continua, diagramas y despliegue) están terminadas. Quedan las pruebas que cualquiera puede tomar desde su fork:
 
 | Issue | Qué falta | Quién |
 |---|---|---|
-| [#28](https://github.com/SemilleroSOLID/clean-architecture-api/issues/28) | Diagramas de secuencia por capas (mostrando el dominio), de despliegue y entidad-relación. | Asignada |
 | [#32](https://github.com/SemilleroSOLID/clean-architecture-api/issues/32) | Pruebas de `ConvocationService`. | Abierta: cualquiera, en su fork |
 | [#33](https://github.com/SemilleroSOLID/clean-architecture-api/issues/33) | Pruebas de `RequestService`. | Abierta: cualquiera, en su fork |
 | [#34](https://github.com/SemilleroSOLID/clean-architecture-api/issues/34) | Pruebas de `RequirementService`, `AuthService` y los mappers. | Abierta: cualquiera, en su fork |
