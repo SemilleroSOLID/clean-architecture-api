@@ -961,11 +961,12 @@ Dentro de Docker Compose el backend usa `sqlserver:1433` y `rabbitmq:5672`. La z
 ## Pruebas
 
 ```bash
-./gradlew test                     # todas las pruebas, sin Docker
+./gradlew test                     # pruebas unitarias, sin Docker
 ./gradlew test jacocoTestReport    # y el reporte de cobertura en build/reports/jacoco/test/html/index.html
+./gradlew integrationTest          # pruebas de integración, con Docker encendido (ver abajo)
 ```
 
-No necesitan SQL Server ni RabbitMQ: las pruebas unitarias simulan lo que el código usa de afuera, y `contextLoads` arranca Spring con el perfil `test` (`src/test/resources/application-test.properties`), que usa una base H2 en memoria solo para comprobar que la aplicación se puede armar. Las pruebas contra un SQL Server real son las de integración ([#25](https://github.com/SemilleroSOLID/clean-architecture-api/issues/25)).
+No necesitan SQL Server ni RabbitMQ: las pruebas unitarias simulan lo que el código usa de afuera, y `contextLoads` arranca Spring con el perfil `test` (`src/test/resources/application-test.properties`), que usa una base H2 en memoria solo para comprobar que la aplicación se puede armar. Las pruebas contra un SQL Server real son las [de integración](#pruebas-de-integración).
 
 | Clase | Capa | Pruebas | Qué cubre |
 |---|---|:-:|---|
@@ -981,6 +982,8 @@ No necesitan SQL Server ni RabbitMQ: las pruebas unitarias simulan lo que el có
 | `RabbitMQSenderTest` | Infrastructure | 3 | Que el evento se publique en el exchange, que espere al commit y que con RabbitMQ caído la operación no falle. |
 | `JwtTokenProviderTest` | Infrastructure | 4 | Que el token lleve el usuario y venza a las 8 horas, y que se rechace uno vencido, alterado o firmado con otra clave. |
 | `ServiciosUcaldasLogicaNegocioApplicationTests` | Todas | 1 | `contextLoads`: que Spring pueda crear todos los componentes. |
+| **`ConvocationIntegrationTest`** | Integración | 3 | **Ejemplo:** el administrador crea una convocatoria y queda guardada (200); un estudiante recibe 403 y sin token, 401. |
+| **`RequestIntegrationTest`** | Integración | 1 | **Ejemplo:** un estudiante se postula; la solicitud queda a su nombre aunque el cuerpo diga otro `studentId`, y se publica el evento. |
 
 Las pruebas del dominio crean los objetos con `new`, sin Spring ni base de datos; las de los servicios y el publicador usan repositorios y un `RabbitTemplate` simulados con Mockito. Que se pueda probar así es una de las señales más claras de que el dominio está bien aislado.
 
@@ -1050,6 +1053,54 @@ void aStudentThatDoesNotExistIsANotFoundError() {
 
 El reporte de cobertura muestra en verde las líneas que alguna prueba ejecutó y en rojo las que no: sirve para encontrar qué caso falta.
 
+### Pruebas de integración
+
+Prueban el sistema de punta a punta: la petición HTTP con su token, la seguridad, el controlador, el servicio, el dominio y **un SQL Server real**. Están en `src/test/java/com/example/demo/Integration/` y se corren aparte, porque necesitan Docker:
+
+```bash
+# Con Java 17 y Docker Desktop encendido
+./gradlew integrationTest
+
+# Sin Java: Gradle dentro de un contenedor que puede usar el Docker de tu máquina
+docker run --rm -e TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal -v "$(pwd)":/app -v gradle-cache:/root/.gradle -v /var/run/docker.sock:/var/run/docker.sock -w /app eclipse-temurin:17-jdk-jammy bash ./gradlew integrationTest
+```
+
+En PowerShell, cambia `$(pwd)` por `${PWD}`. `TESTCONTAINERS_HOST_OVERRIDE` solo hace falta en esta segunda forma: le dice a Testcontainers cómo llegar, desde adentro del contenedor, a la base que levanta.
+
+**Cómo funcionan** (todo está en la clase base `IntegrationTest`):
+
+- **La base de datos** la levanta [Testcontainers](https://testcontainers.com/) con la **misma imagen del compose** (`clean-architecture-api-sqlserver`): mismo SQL Server, mismo `create-database.sql` y los mismos usuarios de prueba. Usa un contenedor propio que se borra al terminar, así que **no toca los datos de tu compose** y no hace falta tenerlo encendido. Si la imagen no existe todavía, se construye una vez desde `sqlserver.Dockerfile`.
+- **RabbitMQ se simula:** `IRabbitMQSender` es un `@MockBean`, así que no hace falta RabbitMQ y la prueba puede revisar qué evento se publicó.
+- **El token se obtiene como en el front:** `tokenOf(ADMIN, ADMIN_PASSWORD)` hace `POST /auth/login` con los usuarios semilla y devuelve el JWT.
+- **La primera vez tarda más** (arranca SQL Server, unos 30 segundos); el contenedor se comparte entre todas las clases de prueba.
+
+**Cómo agregar un flujo** (los pendientes están en [#35](https://github.com/SemilleroSOLID/clean-architecture-api/issues/35)):
+
+```java
+class ConvocationStatesIntegrationTest extends IntegrationTest {      // 1. heredar de IntegrationTest
+
+    @Test
+    void anAdministratorClosesAnOpenConvocation() throws Exception {
+        String admin = tokenOf(ADMIN, ADMIN_PASSWORD);              // 2. el token del rol que llama
+        // 3. preparar los datos con el api (o con jdbcTemplate si el api no permite crearlos así)
+        int id = /* crear una convocatoria, como en ConvocationIntegrationTest */ 0;
+
+        mockMvc.perform(as(admin, put("/convocation/closeConvocation/" + id)))   // 4. la petición
+                .andExpect(status().isOk())                                    // 5. el código HTTP...
+                .andExpect(jsonPath("$.data.state").value("CLOSED"));          //    ...y el CustomResponse
+    }
+}
+```
+
+| Necesito... | Cómo | Ejemplo |
+|---|---|---|
+| Llamar como administrador o estudiante | `as(tokenOf(LAURA, STUDENT_PASSWORD), get(...))` | `ConvocationIntegrationTest` |
+| Revisar el cuerpo `CustomResponse` | `jsonPath("$.codeState")`, `jsonPath("$.message")`, `jsonPath("$.data...")` | `ConvocationIntegrationTest` |
+| Datos que el api no deja crear directamente | `jdbcTemplate.update("UPDATE Convocation SET startDate = ? ...")` | `RequestIntegrationTest` |
+| Comprobar el evento publicado | `ArgumentCaptor` + `verify(eventSender).publishRequestStatusChanged(...)` | `RequestIntegrationTest` |
+
+Cada prueba crea sus propios datos (por ejemplo, su propia convocatoria), porque la base se comparte entre pruebas: así no dependen del orden en que corren.
+
 ## Cómo contribuir
 
 Se trabaja con **fork**, así varias personas pueden hacer cambios a la vez sin pisarse:
@@ -1086,12 +1137,11 @@ Las cuatro fases del backlog (convocatorias, solicitudes, gestión y notificacio
 | Issue | Qué falta | Quién |
 |---|---|---|
 | [#28](https://github.com/SemilleroSOLID/clean-architecture-api/issues/28) | Diagramas de secuencia por capas (mostrando el dominio), de despliegue y entidad-relación. | Asignada |
-| [#25](https://github.com/SemilleroSOLID/clean-architecture-api/issues/25) | Base de las pruebas de integración con Testcontainers y dos ejemplos. | Asignada |
 | [#26](https://github.com/SemilleroSOLID/clean-architecture-api/issues/26) | GitHub Actions: compilar y correr las pruebas en cada push. | Asignada |
 | [#32](https://github.com/SemilleroSOLID/clean-architecture-api/issues/32) | Pruebas de `ConvocationService`. | Abierta: cualquiera, en su fork |
 | [#33](https://github.com/SemilleroSOLID/clean-architecture-api/issues/33) | Pruebas de `RequestService`. | Abierta: cualquiera, en su fork |
 | [#34](https://github.com/SemilleroSOLID/clean-architecture-api/issues/34) | Pruebas de `RequirementService`, `AuthService` y los mappers. | Abierta: cualquiera, en su fork |
-| [#35](https://github.com/SemilleroSOLID/clean-architecture-api/issues/35) | Pruebas de integración de los demás flujos (después de #25). | Abierta: cualquiera, en su fork |
+| [#35](https://github.com/SemilleroSOLID/clean-architecture-api/issues/35) | Pruebas de integración de los demás flujos (ver la guía en [Pruebas de integración](#pruebas-de-integración)). | Abierta: cualquiera, en su fork |
 
 Todas las issues están en el [tablero del proyecto](https://github.com/orgs/SemilleroSOLID/projects/12) y en [GitHub](https://github.com/SemilleroSOLID/clean-architecture-api/issues).
 

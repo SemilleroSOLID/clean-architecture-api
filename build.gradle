@@ -30,6 +30,8 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	// Only for contextLoads in the "test" profile (issue #24)
 	testRuntimeOnly 'com.h2database:h2'
+	// Integration tests against a real SQL Server in Docker (issue #25)
+	testImplementation 'org.testcontainers:junit-jupiter'
 
 	//sql server
 	runtimeOnly 'com.microsoft.sqlserver:mssql-jdbc'
@@ -41,7 +43,22 @@ dependencies {
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+	// Unit tests only: they need no Docker
+	useJUnitPlatform {
+		excludeTags 'integration'
+	}
+}
+
+// Integration tests (issue #25): ./gradlew integrationTest  (needs Docker running)
+tasks.register('integrationTest', Test) {
+	description = 'Runs the integration tests against a real SQL Server started with Testcontainers.'
+	group = 'verification'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeTags 'integration'
+	}
+	shouldRunAfter tasks.named('test')
 }
 
 // Coverage (issue #24): ./gradlew test jacocoTestReport -> build/reports/jacoco/test/html/index.html
