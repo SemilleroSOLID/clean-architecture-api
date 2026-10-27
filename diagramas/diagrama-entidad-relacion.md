@@ -1,9 +1,9 @@
 # Diagrama entidad-relación
 
-Las tablas de `CleanArchitectureDB` tal como quedan en SQL Server. Salen de dos lugares:
+El diagrama entidad-relación muestra cómo están guardados los datos: qué tablas hay, qué columnas tiene cada una y cómo se relacionan. Las tablas de `CleanArchitectureDB` se crean en dos momentos:
 
-- **[`create-database.sql`](../create-database.sql)** crea los catálogos y los datos de prueba: `Requirement`, `Student`, `ConvocationType` y `Users`.
-- **Hibernate** (`spring.jpa.hibernate.ddl-auto=update`) crea las tablas del negocio a partir de las entidades JPA de `Infrastructure/Persistence/Entities`: `Convocation`, `ConvocationRequirement`, `Request` y `RequestRequirement`.
+- [`create-database.sql`](../create-database.sql) crea los catálogos y los datos de prueba: `Requirement`, `Student`, `ConvocationType` y `Users`.
+- Hibernate crea el resto al arrancar el backend (`spring.jpa.hibernate.ddl-auto=update`), a partir de las entidades JPA de `Infrastructure/Persistence/Entities`: `Convocation`, `ConvocationRequirement`, `Request` y `RequestRequirement`.
 
 ```mermaid
 erDiagram
@@ -78,20 +78,26 @@ erDiagram
 
 ## Cómo leerlo
 
-- **Línea continua: llave foránea real.** La única es `Users.studentId → Student.id`, que crea `create-database.sql` junto con una regla (`CHECK`): un usuario `STUDENT` siempre tiene `studentId` y el `ADMIN` nunca.
-- **Línea punteada: relación que mantiene la aplicación.** Las tablas que crea Hibernate guardan la otra tabla por su id (`convocationId`, `studentId`...) pero sin `FOREIGN KEY`, porque las entidades JPA no usan `@ManyToOne`. Es una decisión del proyecto: el dominio trabaja con ids y cada servicio decide qué cargar. La consecuencia es que **la integridad la cuida el código**: por ejemplo, `RequestService` revisa que existan el estudiante y la convocatoria antes de guardar una solicitud, y `ConvocationService` no deja eliminar una convocatoria que tiene solicitudes.
-- **Los estados y las condiciones no tienen tabla.** `stateConvocationId`, `requestState` y `conditionalId` son el número de un `enum` del dominio (`EnumConvocationState`, `EnumStateRequest`, `EnumConditionRequirement`); los mappers de persistencia los convierten. `convocationTypeId` sí tiene tabla, `ConvocationType`, y sus ids coinciden con `EnumConvocationType`.
-- **Una solicitud por estudiante y convocatoria** es una regla del servicio (`existsByStudentIdAndConvocationId` → 409), no un índice único de la base.
+Hay dos tipos de línea y la diferencia importa.
+
+La **línea continua** es una llave foránea de verdad: SQL Server no deja guardar un valor que no exista en la otra tabla. Solo hay una, `Users.studentId → Student.id`. Además, `create-database.sql` le agrega una regla `CHECK`: un usuario `STUDENT` siempre tiene `studentId` y el `ADMIN` nunca.
+
+La **línea punteada** es una relación que la base no conoce. Las tablas que crea Hibernate guardan el id de la otra tabla (`convocationId`, `studentId`...) sin `FOREIGN KEY`, porque las entidades JPA no usan `@ManyToOne`. El proyecto lo hace así a propósito, para que el dominio trabaje con ids y cada servicio decida qué cargar. El costo es que la integridad la tiene que cuidar el código. Por ejemplo, `RequestService` comprueba que existan el estudiante y la convocatoria antes de guardar una solicitud, y `ConvocationService` no deja borrar una convocatoria que ya tiene solicitudes.
+
+Otros detalles que conviene notar:
+
+- Los estados y las condiciones no tienen tabla. `stateConvocationId`, `requestState` y `conditionalId` guardan el número de un enum del dominio, y los mappers de persistencia hacen la conversión. `convocationTypeId` sí tiene tabla (`ConvocationType`), con los mismos ids que `EnumConvocationType`.
+- La regla de una sola solicitud por estudiante en cada convocatoria tampoco está en la base. La aplica el servicio con `existsByStudentIdAndConvocationId`, que responde 409.
 
 ## Cardinalidades
 
-| Relación | Se lee |
+| Relación | Cómo se lee |
 |---|---|
-| `ConvocationType` – `Convocation` | Un tipo clasifica cero o muchas convocatorias. |
-| `Convocation` – `ConvocationRequirement` | Una convocatoria exige cero o muchos requisitos; cada requisito es de una sola convocatoria. |
-| `Requirement` – `ConvocationRequirement` | Un tipo del catálogo (por ejemplo *Promedio*) se usa en muchos requisitos concretos (*Promedio mayor o igual a 4.0*). |
-| `Convocation` – `Request` y `Student` – `Request` | Un estudiante envía muchas solicitudes, pero a lo sumo una por convocatoria. |
-| `Request` – `RequestRequirement` | Una solicitud tiene una respuesta por cada requisito de su convocatoria (al menos una si la convocatoria tiene requisitos). |
-| `Student` – `Users` | Cada estudiante con acceso tiene un usuario; el administrador es un usuario sin estudiante. |
+| `ConvocationType` – `Convocation` | Un tipo puede tener muchas convocatorias. |
+| `Convocation` – `ConvocationRequirement` | Una convocatoria tiene varios requisitos, y cada requisito pertenece a una sola. |
+| `Requirement` – `ConvocationRequirement` | Un tipo del catálogo, como *Promedio*, se usa en muchos requisitos concretos, como *Promedio mayor o igual a 4.0*. |
+| `Student` – `Request` – `Convocation` | Un estudiante puede tener muchas solicitudes, pero solo una por convocatoria. |
+| `Request` – `RequestRequirement` | Una solicitud tiene una respuesta por cada requisito de su convocatoria. |
+| `Student` – `Users` | Cada estudiante con acceso tiene un usuario. El administrador es un usuario sin estudiante. |
 
-Cómo se ve esto en el código está en el [modelo de dominio](diagrama-clases.md#2-modelo-de-dominio): las entidades del dominio tienen los mismos ids, y `ConvocationPersistenceMapper` y los demás mappers convierten entre la tabla y la entidad.
+Para ver cómo se reflejan estas tablas en el código, compáralas con el [modelo de dominio](diagrama-clases.md#2-modelo-de-dominio): las entidades usan los mismos ids, y los mappers de persistencia pasan de una forma a la otra.

@@ -1,33 +1,34 @@
 # Diagramas de secuencia
 
-Estos diagramas muestran qué pasa, en orden, desde que el usuario hace clic en el front hasta que el dato queda guardado en SQL Server. Cada participante tiene el nombre de la clase real, para poder abrir el código mientras se lee, y está dentro de la caja de su capa:
+Un diagrama de secuencia se lee de arriba hacia abajo, como una conversación: cada flecha es una llamada de un objeto a otro y el número indica el orden. Aquí se usan para seguir una petición desde que el usuario hace clic hasta que el dato queda en SQL Server.
 
-| Caja | Qué hay adentro |
+Los participantes están agrupados en cajas de color, una por capa de Clean Architecture:
+
+| Caja | Qué contiene |
 |---|---|
-| **Api** (gris) | Controladores, filtro JWT y `GlobalExceptionHandler`: reciben HTTP y responden HTTP. |
-| **Application** (azul) | Servicios y mappers: coordinan el caso de uso. También los puertos que no son del negocio (`IRabbitMQSender`, `IPasswordHasher`, `ITokenProvider`). |
-| **Domain** (amarillo) | Entidades, objetos de estado (patrón State), puertos de los repositorios y excepciones del dominio. **Aquí están las reglas del negocio.** |
-| **Infrastructure** (gris) | Adaptadores: repositorios JPA, publicador de RabbitMQ, BCrypt y JWT. |
+| Api (gris) | Controladores, el filtro JWT y `GlobalExceptionHandler`. Reciben HTTP y responden HTTP. |
+| Application (azul) | Servicios y mappers, que coordinan el caso de uso. También los puertos técnicos: `IRabbitMQSender`, `IPasswordHasher` e `ITokenProvider`. |
+| Domain (amarillo) | Entidades, objetos de estado, puertos de los repositorios y excepciones del negocio. Aquí se decide si algo está permitido. |
+| Infrastructure (gris) | Los adaptadores: repositorios JPA, el publicador de RabbitMQ, BCrypt y JWT. |
 
-SQL Server, RabbitMQ y el front quedan afuera de las cajas: son otros procesos.
+SQL Server, RabbitMQ y el front quedan por fuera porque son otros procesos.
 
-Al leerlos, fíjate en dos cosas:
+**Qué observar en todos.** La caja Domain nunca llama a algo que esté fuera de ella. Cuando el servicio necesita la base de datos le habla al puerto (por ejemplo `IConvocationRepository`), que pertenece al dominio, y es Spring quien conecta ese puerto con su implementación en Infrastructure. Por eso verás la flecha *implementado por* entre el puerto y el repositorio JPA. Lo mismo pasa con los errores: el dominio lanza una excepción sin saber nada de HTTP y es `GlobalExceptionHandler`, en la capa Api, quien la convierte en un 400.
 
-- **La caja Domain no llama a nadie que esté fuera de ella.** El servicio usa el puerto (`IConvocationRepository`, que es del dominio), y la implementación de Infrastructure se conecta por inyección de dependencias. Por eso las flechas hacia la base de datos salen del puerto con el texto *implementado por*.
-- **Las reglas las decide el dominio y el error lo traduce la capa Api.** El dominio lanza `DomainValidationException` (o sus hijas `InvalidConvocationStateException` e `InvalidRequestStateException`) sin saber que existe HTTP, y `GlobalExceptionHandler` la convierte en un 400.
+Los diagramas son seis:
 
-1. [Crear una convocatoria](#1-crear-una-convocatoria-cu-001) (CU-001)
-2. [Cambiar el estado de una convocatoria](#2-cambiar-el-estado-de-una-convocatoria-patrón-state) (patrón State)
-3. [Crear una solicitud](#3-crear-una-solicitud-cu-002) (CU-002)
-4. [Aprobar o rechazar una solicitud](#4-aprobar-o-rechazar-una-solicitud) (patrón State y eventos)
+1. [Crear una convocatoria](#1-crear-una-convocatoria-cu-001)
+2. [Cambiar el estado de una convocatoria](#2-cambiar-el-estado-de-una-convocatoria-patrón-state)
+3. [Crear una solicitud](#3-crear-una-solicitud-cu-002)
+4. [Aprobar o rechazar una solicitud](#4-aprobar-o-rechazar-una-solicitud)
 5. [Retirar una solicitud](#5-retirar-una-solicitud)
 6. [Iniciar sesión y usar el token](#6-iniciar-sesión-y-usar-el-token)
 
-Para no repetir, los diagramas 1 a 5 suponen que la petición ya pasó la seguridad (el token es válido y el rol puede usar el endpoint). Cómo se revisa eso está en el [diagrama 6](#6-iniciar-sesión-y-usar-el-token).
+Del 1 al 5 se supone que la petición ya pasó la seguridad. El [diagrama 6](#6-iniciar-sesión-y-usar-el-token) muestra cómo se revisa el token.
 
 ## 1. Crear una convocatoria (CU-001)
 
-El administrador llena el formulario y lo envía. Hay dos niveles de validación: el **formato** de los campos lo revisa Bean Validation (`@Valid`) en la capa Api antes de entrar al servicio, y las **reglas del negocio** (fechas y requisitos) las revisa la entidad `Convocation`, que a su vez le pide a cada `ConvocationRequirement` que se valide.
+El administrador envía el formulario. Hay dos validaciones distintas y conviene no confundirlas: `@Valid` revisa el formato de los campos en la capa Api (que el título no esté vacío, por ejemplo), y la entidad `Convocation` revisa las reglas del negocio (que las fechas tengan sentido y que los requisitos existan).
 
 ```mermaid
 sequenceDiagram
@@ -90,11 +91,11 @@ sequenceDiagram
     end
 ```
 
-**Qué mostrar de aquí:** el controlador no tiene ninguna regla, solo recibe y responde. El servicio no sabe validar fechas, se lo pide a la entidad. Y como `validate` corre antes del primer `INSERT`, una convocatoria inválida nunca llega a la base; si fallara el segundo `INSERT`, `@Transactional` deshace también el primero.
+Fíjate en que el controlador no valida nada por su cuenta y que el servicio tampoco sabe validar fechas: se lo pide a la entidad. Como `validate` se ejecuta antes del primer `INSERT`, una convocatoria inválida nunca llega a la base. Y si fallara el segundo `INSERT`, `@Transactional` deshace también el primero.
 
 ## 2. Cambiar el estado de una convocatoria (patrón State)
 
-Ejemplo con *cerrar*. Las cuatro acciones (cerrar, reabrir, finalizar y cancelar) pasan por el mismo método privado `changeState` del servicio: buscar, dejar que el estado aplique la transición y guardar.
+El ejemplo es cerrar, pero reabrir, finalizar y cancelar recorren el mismo camino porque todas pasan por el método `changeState` del servicio: busca la convocatoria, deja que su estado aplique la acción y guarda.
 
 ```mermaid
 sequenceDiagram
@@ -152,19 +153,19 @@ sequenceDiagram
     end
 ```
 
-Las otras tres acciones siguen el mismo camino; solo cambia qué revisa el estado:
+Lo que cambia entre las cuatro acciones es solo lo que revisa el estado:
 
-| Acción | Endpoint | Qué decide el dominio | Error típico |
+| Acción | Endpoint | Qué revisa el dominio | Error si no se cumple |
 |---|---|---|---|
-| Reabrir | `PUT /convocation/reopenConvocation/{id}` | Solo `ClosedState` la permite, con una nueva fecha de fin posterior a hoy. | *"La nueva fecha de fin debe ser posterior a la fecha actual"* |
-| Finalizar | `PUT /convocation/finishConvocation/{id}` | Solo `ClosedState`, y sin solicitudes por decidir. El servicio pregunta antes `existsByConvocationIdAndStateIn(id, UNDECIDED)` y le pasa el resultado al dominio. | *"No se puede finalizar: hay solicitudes sin aprobar ni rechazar"* |
-| Cancelar | `PUT /convocation/cancelConvocation/{id}` | `OpenState` y `ClosedState`, con justificación obligatoria. | *"La justificación de la cancelación es obligatoria"* |
+| Reabrir | `PUT /convocation/reopenConvocation/{id}` | Solo una convocatoria cerrada se reabre, y con una fecha de fin posterior a hoy. | *"La nueva fecha de fin debe ser posterior a la fecha actual"* |
+| Finalizar | `PUT /convocation/finishConvocation/{id}` | Tiene que estar cerrada y sin solicitudes por decidir. El servicio consulta eso antes y le pasa el resultado al dominio. | *"No se puede finalizar: hay solicitudes sin aprobar ni rechazar"* |
+| Cancelar | `PUT /convocation/cancelConvocation/{id}` | Abierta o cerrada, siempre con justificación. | *"La justificación de la cancelación es obligatoria"* |
 
-**Qué mostrar de aquí:** en `ConvocationService` no hay ningún `if (estado == ...)`. El servicio carga, delega y guarda. Quien decide si la acción es válida es el objeto del estado actual, que entrega `ConvocationStates.of(...)` (una fábrica simple). Si mañana se agrega un estado, se crea su clase sin tocar el servicio.
+Busca en `ConvocationService` un `if` que pregunte por el estado: no hay ninguno. Quien decide es el objeto que entrega `ConvocationStates.of(...)`. Si mañana apareciera un estado nuevo, se crearía su clase y el servicio quedaría igual.
 
 ## 3. Crear una solicitud (CU-002)
 
-El estudiante se postula con un valor para cada requisito. Las comprobaciones van de la más barata a la más costosa: que existan el estudiante y la convocatoria, que la convocatoria esté recibiendo solicitudes, que no haya una solicitud repetida y, al final, que las respuestas estén completas. El estudiante sale del token, no del cuerpo de la petición.
+El estudiante se postula dando un valor para cada requisito. Las comprobaciones van de la más barata a la más costosa: primero que existan el estudiante y la convocatoria, luego que la convocatoria esté recibiendo solicitudes, después que no haya una solicitud repetida y por último que las respuestas estén completas. El id del estudiante sale del token y no del JSON, así nadie puede postularse a nombre de otro.
 
 ```mermaid
 sequenceDiagram
@@ -244,11 +245,11 @@ sequenceDiagram
     end
 ```
 
-Las flechas que terminan en una excepción cortan el flujo: no se ejecuta nada de lo que sigue. Como todas las comprobaciones van antes del primer `INSERT`, una solicitud inválida nunca llega a la base. Y como el evento sale **después del commit**, el estudiante nunca recibe un correo de una solicitud que no quedó guardada.
+Cada flecha que termina en una excepción corta el flujo y lo que sigue ya no se ejecuta. El evento para el correo se registra antes de responder, pero sale después del commit, de modo que el estudiante nunca recibe un correo de una solicitud que no se guardó.
 
 ## 4. Aprobar o rechazar una solicitud
 
-Cuando la convocatoria está cerrada, el administrador decide las solicitudes. La regla tiene dos partes y cada una vive en un objeto distinto del dominio: **la solicitud** debe estar en revisión (`ReviewRequestState`, que agrupa `PENDING` y `ACTIVE`) y **la convocatoria** debe estar cerrada (`ClosedState.ensureCanDecideRequests`). La solicitud le pregunta a la convocatoria; el servicio no revisa ninguna de las dos cosas.
+Para decidir una solicitud se deben cumplir dos condiciones y cada una la revisa un objeto distinto. La solicitud tiene que estar en revisión, y eso lo sabe su estado (`ReviewRequestState`, compartido por `PENDING` y `ACTIVE`). La convocatoria tiene que estar cerrada, y eso lo sabe el estado de la convocatoria. La solicitud le pregunta a la convocatoria y el servicio no revisa ninguna de las dos.
 
 ```mermaid
 sequenceDiagram
@@ -312,13 +313,13 @@ sequenceDiagram
     end
 ```
 
-**Rechazar** (`PUT /request/rejectRequest/{id}` con `{ "comment": "..." }`) sigue el mismo camino con `reject(convocation, comment)`. Además, la justificación es obligatoria dos veces: `@NotBlank` en `RejectRequestDto` (capa Api) y `ReviewRequestState.reject` en el dominio, que la guarda en `Request.comment` y pasa la solicitud a `REJECT`.
+Rechazar funciona igual, con `reject(convocation, comment)`. La justificación se exige dos veces: `@NotBlank` en `RejectRequestDto` y otra vez en `ReviewRequestState.reject`, que la guarda en `Request.comment`.
 
-El administrador recibe la respuesta sin esperar a que salga el correo. Si el servicio de notificaciones está caído, el mensaje espera en la cola. Si el caído es RabbitMQ, la decisión se guarda igual y el backend registra en el log el evento que no pudo publicar. El detalle del mensaje está en el [README](../README.md#eventos-de-notificación).
+El administrador recibe su respuesta sin esperar el correo. Si el servicio de notificaciones está apagado, el mensaje espera en la cola; si el apagado es RabbitMQ, la decisión se guarda de todas formas y el backend deja el evento perdido en el log. El formato del mensaje está en el [README](../README.md#eventos-de-notificación).
 
 ## 5. Retirar una solicitud
 
-El estudiante retira una solicitud mientras está en revisión. Hay dos reglas: que sea **su** solicitud (`Request.belongsTo`) y que el estado lo permita (`ReviewRequestState.cancel`). La solicitud no se borra: queda `CANCELLED` para el historial.
+El estudiante puede retirar una solicitud mientras sigue en revisión. Aquí hay dos reglas de naturaleza distinta: que la solicitud sea suya y que su estado lo permita.
 
 ```mermaid
 sequenceDiagram
@@ -379,11 +380,11 @@ sequenceDiagram
     end
 ```
 
-**Qué mostrar de aquí:** `belongsTo` es una pregunta al dominio ("¿esta solicitud es de este estudiante?"), pero la respuesta "no tienes permiso" es de Application (`ForbiddenException`), porque es una regla de acceso y no del negocio. Lo que sí es del negocio, que una solicitud aprobada ya no se puede retirar, lo decide el estado.
+Vale la pena comparar los dos errores. `belongsTo` es una pregunta al dominio, pero el "no tienes permiso" lo lanza Application (`ForbiddenException`, 403) porque es una regla de acceso. En cambio, que una solicitud aprobada ya no se pueda retirar es una regla del negocio, y por eso la decide el estado. La solicitud retirada no se borra: queda `CANCELLED` para el historial.
 
 ## 6. Iniciar sesión y usar el token
 
-El login usa tres puertos: `IUserRepository` (del dominio, porque `User` es una entidad) e `IPasswordHasher` e `ITokenProvider` (de Application, porque son detalles técnicos que el caso de uso necesita). BCrypt y JWT quedan en Infrastructure, así que se podrían cambiar sin tocar `AuthService`.
+El login usa tres puertos. `IUserRepository` está en Domain porque `User` es una entidad. `IPasswordHasher` e `ITokenProvider` están en Application porque son herramientas técnicas que el caso de uso necesita, no reglas del negocio. BCrypt y JWT viven en Infrastructure y se podrían cambiar sin tocar `AuthService`.
 
 ```mermaid
 sequenceDiagram
@@ -457,4 +458,4 @@ sequenceDiagram
     end
 ```
 
-En el login el dominio aporta la entidad `User` y su puerto, pero no lanza ninguna excepción: la regla *"correo o contraseña incorrectos"* es del caso de uso (`UnauthorizedException`, de Application). El mismo mensaje sirve para un correo que no existe y para una contraseña equivocada, así no se puede averiguar quién tiene cuenta.
+En este caso el dominio no lanza ninguna excepción. Comprobar las credenciales es trabajo del caso de uso, y el error es `UnauthorizedException`, de Application. El mensaje es el mismo para un correo que no existe y para una contraseña equivocada, así nadie puede averiguar quién tiene cuenta probando correos.

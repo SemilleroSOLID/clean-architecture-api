@@ -1,14 +1,14 @@
 # Diagrama de clases
 
-Este documento muestra cómo están organizadas las clases del backend. Está partido en varios diagramas, porque uno solo con las más de 130 clases no se podría leer:
+El backend tiene más de 130 clases y en un solo diagrama no se leerían. Por eso esta página tiene varios, cada uno sobre un tema:
 
-1. **[Por capas](#1-clases-por-capas-convocatoria):** el recorrido de la convocatoria por las cuatro capas, para ver hacia dónde apuntan las dependencias.
-2. **[Modelo de dominio](#2-modelo-de-dominio):** las entidades del negocio, los usuarios y cómo se relacionan.
-3. **[Solicitudes: estados y eventos](#3-solicitudes-estados-y-eventos):** el patrón State de la solicitud y el evento que se publica en RabbitMQ.
-4. **[Seguridad](#4-seguridad-login-y-jwt):** el login y el token JWT con puertos y adaptadores.
-5. **[Patrón State de la convocatoria](#5-patrón-state-de-la-convocatoria):** está en [estados-convocatoria.md](estados-convocatoria.md#implementación-patrón-state), aquí solo se resume.
+1. [Clases por capas](#1-clases-por-capas-convocatoria): la convocatoria pasando por las cuatro capas. Sirve para ver hacia dónde apuntan las dependencias.
+2. [Modelo de dominio](#2-modelo-de-dominio): las entidades del negocio y cómo se relacionan.
+3. [Solicitudes: estados y eventos](#3-solicitudes-estados-y-eventos): el patrón State de la solicitud y el evento que va a RabbitMQ.
+4. [Seguridad](#4-seguridad-login-y-jwt): el login y el token JWT.
+5. [Patrón State de la convocatoria](#5-patrón-state-de-la-convocatoria): un resumen, el detalle está en [estados-convocatoria.md](estados-convocatoria.md#implementación-patrón-state).
 
-Las clases de solicitudes (`Request`) y estudiantes (`Student`) siguen exactamente la misma estructura que las de convocatoria: controlador, interfaz de servicio, servicio, mapper de DTO, interfaz de repositorio, repositorio, mapper de persistencia, CRUD de Spring Data y entidad JPA.
+Las clases de solicitudes y estudiantes siguen el mismo molde que las de convocatoria: controlador, interfaz del servicio, servicio, mapper de DTO, interfaz del repositorio, repositorio, mapper de persistencia, CRUD de Spring Data y entidad JPA. Si entiendes el primer diagrama, entiendes cómo está hecho el resto.
 
 ## 1. Clases por capas (convocatoria)
 
@@ -141,10 +141,13 @@ classDiagram
 
 ### Cómo leerlo
 
-- Las flechas de **uso** (`-->`) siempre bajan hacia el dominio: el controlador usa la interfaz del servicio, el servicio usa la interfaz del repositorio. Ninguna clase del dominio usa algo de las otras capas.
-- La única flecha que "sube" es la de **implementación** (`<|..`): `ConvocationRepository`, que está en Infrastructure, implementa `IConvocationRepository`, que está en Domain. Esa es la inversión de dependencias: el dominio define qué necesita y la infraestructura se adapta.
-- Hay **tres representaciones** de una convocatoria y cada una vive en su capa: `ConvocationDto` (lo que viaja por HTTP), `Convocation` (las reglas del negocio) y `ConvocationEntity` (la tabla de SQL Server). Los mappers convierten entre ellas, así que un cambio en la tabla no toca el dominio ni el JSON.
-- Las excepciones también están separadas: el dominio lanza `DomainValidationException` sin saber nada de HTTP, y `GlobalExceptionHandler`, en la capa Api, decide que eso es un 400.
+Empieza por las flechas de uso (`-->`). Todas van hacia adentro: el controlador usa la interfaz del servicio y el servicio usa la interfaz del repositorio. Ninguna clase de Domain usa algo de las otras capas.
+
+Ahora busca la flecha de implementación (`<|..`) entre `ConvocationRepository` e `IConvocationRepository`. La interfaz está en Domain y la clase que la implementa está en Infrastructure, así que esta dependencia apunta hacia el dominio aunque la clase esté afuera. Eso es la inversión de dependencias: el dominio dice qué necesita y la infraestructura se adapta.
+
+Fíjate también en que una convocatoria tiene tres formas, una por capa. `ConvocationDto` es lo que viaja en el JSON, `Convocation` tiene las reglas y `ConvocationEntity` es la fila de la tabla. Los mappers convierten entre ellas, y por eso un cambio en la tabla no obliga a tocar el dominio ni el JSON.
+
+Con los errores pasa algo parecido. El dominio lanza `DomainValidationException` sin saber que existe HTTP, y `GlobalExceptionHandler` decide que eso es un 400.
 
 ## 2. Modelo de dominio
 
@@ -289,24 +292,24 @@ classDiagram
     User --> EnumRole
 ```
 
-### Qué representa cada clase
+### Qué es cada clase
 
-| Clase | Qué es | Reglas que tiene |
+| Clase | Qué representa | Reglas que tiene |
 |---|---|---|
-| `Convocation` | Una convocatoria publicada por el administrador (monitoría, beca o residencia). | Fechas válidas, requisitos válidos, no cambiar las reglas si ya hay solicitudes, y todo lo que depende del estado (lo resuelve el patrón State). |
-| `ConvocationRequirement` | Un requisito concreto de una convocatoria, por ejemplo "Promedio mayor o igual a 4.0". | El tipo de requisito debe existir, el valor debe ser mayor a 0 y, si es una nota, numérico y no mayor a 5.0. `isMetBy` compara el valor del estudiante con la condición: como número si los dos son números y, si no, solo `EQUAL` como texto sin mayúsculas. |
+| `Convocation` | Una convocatoria de monitoría, beca o residencia. | Fechas y requisitos válidos, no cambiar los requisitos si ya hay solicitudes, y todo lo que depende del estado (lo resuelve el patrón State). |
+| `ConvocationRequirement` | Un requisito concreto, por ejemplo "Promedio mayor o igual a 4.0". | El tipo debe existir y el valor ser mayor a 0; si es una nota, numérica y hasta 5.0. `isMetBy` compara el valor del estudiante con la condición: como número si los dos lo son, y si no, solo con `EQUAL` y como texto. |
 | `Requirement` | El catálogo de tipos de requisito (Promedio, Estrato, Semestres...). | `grade` indica si el valor es una nota de 0 a 5. |
-| `ConvocationType` | El catálogo de tipos de convocatoria que viene de la base de datos. | Su id coincide con `EnumConvocationType`. |
-| `Student` | El estudiante que se postula. | Por ahora solo datos. |
-| `User` | Alguien que puede iniciar sesión: el administrador o un estudiante. | La contraseña solo se guarda como hash. Un `STUDENT` está ligado a su `Student`; el `ADMIN` no. |
-| `Request` | La solicitud de un estudiante a una convocatoria. | Debe responder todos los requisitos de la convocatoria, sin repetir ni agregar requisitos ajenos. Al crearla queda `ACTIVE` si cumple todos o `PENDING` si no; nunca se rechaza automáticamente. |
-| `RequestRequirement` | El valor que el estudiante entrega para un requisito, con su adjunto opcional. | — |
+| `ConvocationType` | El catálogo de tipos de convocatoria guardado en la base. | Sus ids coinciden con `EnumConvocationType`. |
+| `Student` | El estudiante que se postula. | Por ahora solo guarda datos. |
+| `User` | Quien puede iniciar sesión: el administrador o un estudiante. | La contraseña se guarda solo como hash. Un `STUDENT` está ligado a su `Student` y el `ADMIN` no. |
+| `Request` | La solicitud de un estudiante a una convocatoria. | Debe responder todos los requisitos, sin repetirlos ni agregar otros. Al crearla queda `ACTIVE` si cumple todo o `PENDING` si no; el sistema nunca la rechaza por su cuenta. |
+| `RequestRequirement` | El valor que dio el estudiante para un requisito, con un adjunto opcional. | — |
 
-Las relaciones entre entidades se guardan por id (`convocationId`, `studentId`) y no como objetos anidados de JPA. Así el dominio no depende de cómo se cargan los datos, y cada servicio decide qué necesita consultar. Cómo queda eso en las tablas está en el [diagrama entidad-relación](diagrama-entidad-relacion.md).
+Las entidades se relacionan por id (`convocationId`, `studentId`) y no guardan objetos anidados de JPA. Así el dominio no depende de cómo se cargan los datos y cada servicio decide qué consultar. Cómo queda esto en las tablas se ve en el [diagrama entidad-relación](diagrama-entidad-relacion.md).
 
 ## 3. Solicitudes: estados y eventos
 
-La solicitud usa el mismo patrón State que la convocatoria, más simple: `PENDING` y `ACTIVE` se comportan igual (las dos esperan la decisión del administrador), así que comparten una sola clase, `ReviewRequestState`. Cada cambio de estado publica un evento a través de un puerto de Application, y RabbitMQ queda en Infrastructure.
+La solicitud aplica el mismo patrón State que la convocatoria, en versión más simple. `PENDING` y `ACTIVE` se comportan igual porque las dos esperan al administrador, así que comparten la clase `ReviewRequestState`. Cada cambio de estado publica un evento por medio de un puerto de Application, y RabbitMQ queda escondido en Infrastructure.
 
 ```mermaid
 classDiagram
@@ -398,12 +401,11 @@ classDiagram
     IRabbitMQSender <|.. RabbitMQSender : implementa
 ```
 
-- **Template Method:** `BaseRequestState` responde *"No se puede aprobar una solicitud aprobada"* para cualquier acción que el estado no permite; cada estado solo dice su nombre con `label()`. Los estados finales (`Accepted`, `Rejected`, `Cancelled`) no sobrescriben ninguna acción.
-- **Adaptador:** `RequestService` solo conoce `IRabbitMQSender`. `RabbitMQSender` registra el envío para después del commit, así el estudiante nunca recibe un correo de un cambio que se deshizo.
+Aquí hay dos patrones más para identificar. `BaseRequestState` es un Template Method: responde *"No se puede aprobar una solicitud aprobada"* a cualquier acción que el estado no permita, y cada subclase solo aporta su nombre con `label()`. Los estados finales (aprobada, rechazada y retirada) no sobrescriben nada. `RabbitMQSender` es un adaptador: `RequestService` solo conoce `IRabbitMQSender`, y el envío real se deja para después del commit, así no sale un correo de un cambio que se deshizo.
 
 ## 4. Seguridad: login y JWT
 
-`AuthService` no sabe de BCrypt, de JWT ni de Spring Security: usa tres puertos y la infraestructura los implementa. El filtro y la configuración de Spring Security están en la capa Api, porque son la puerta de entrada HTTP.
+`AuthService` no sabe nada de BCrypt, de JWT ni de Spring Security. Usa tres puertos y la infraestructura los implementa. El filtro y la configuración de Spring Security están en Api porque son la puerta de entrada HTTP.
 
 ```mermaid
 classDiagram
@@ -485,15 +487,15 @@ classDiagram
     ITokenProvider <|.. JwtTokenProvider : implementa
 ```
 
-`IUserRepository` está en Domain porque `User` es una entidad del negocio. `IPasswordHasher` e `ITokenProvider` están en Application porque no son reglas del negocio sino herramientas que el caso de uso necesita. Las dos son la misma idea: la capa de adentro define la interfaz y Infrastructure la implementa.
+Una pregunta que suele salir: ¿por qué `IUserRepository` está en Domain y los otros dos puertos en Application? Porque `User` es una entidad del negocio, mientras que cifrar contraseñas y firmar tokens son herramientas técnicas que necesita el caso de uso. La idea de fondo es la misma en los tres: la capa de adentro define la interfaz y Infrastructure la implementa.
 
 ## 5. Patrón State de la convocatoria
 
-Las reglas que cambian según el estado de la convocatoria (qué se puede editar, cuándo se cierra, cuándo recibe solicitudes) no están en `if` dentro de los servicios. Cada estado es una clase (`OpenState`, `ClosedState`, `FinishedState`, `CancelledState`) que hereda de `BaseConvocationState` e implementa `ConvocationState`. `Convocation` le pregunta a su estado actual qué hacer. El diagrama completo y la explicación están en [estados-convocatoria.md](estados-convocatoria.md#implementación-patrón-state).
+Las reglas que cambian según el estado (qué se puede editar, cuándo se cierra, cuándo recibe solicitudes) no están en `if` dentro de los servicios. Cada estado es una clase (`OpenState`, `ClosedState`, `FinishedState` y `CancelledState`) que hereda de `BaseConvocationState`, y `Convocation` le pregunta a su estado actual qué hacer. El diagrama y la explicación completa están en [estados-convocatoria.md](estados-convocatoria.md#implementación-patrón-state).
 
 ## Otros diagramas
 
-- [Secuencia por capas](diagrama-secuencia.md): los seis casos de uso, con la capa Domain separada.
-- [Estados de la convocatoria](estados-convocatoria.md): ciclo de vida y el patrón State completo.
+- [Secuencia por capas](diagrama-secuencia.md): los seis casos de uso con la capa Domain separada.
+- [Estados de la convocatoria](estados-convocatoria.md): ciclo de vida y patrón State.
 - [Entidad-relación](diagrama-entidad-relacion.md): las tablas de SQL Server.
 - [Despliegue](diagrama-despliegue.md): los contenedores del Docker Compose.

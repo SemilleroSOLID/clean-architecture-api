@@ -1,17 +1,16 @@
 # Estados de una convocatoria
 
-Propuesta del ciclo de vida de una convocatoria (issue [#30](https://github.com/SemilleroSOLID/clean-architecture-api/issues/30)). Sirve para definir qué estados existen, qué evento hace pasar de uno a otro y qué se puede hacer en cada uno, antes de cambiar el código. Es la base para evaluar el patrón State ([#31](https://github.com/SemilleroSOLID/clean-architecture-api/issues/31)).
+Una convocatoria pasa por varias etapas: se publica, recibe solicitudes, se cierra y al final se decide. Este documento define esas etapas como estados, qué hace pasar de uno a otro y qué se puede hacer en cada uno. Salió de la issue [#30](https://github.com/SemilleroSOLID/clean-architecture-api/issues/30) y se implementó con el patrón State en [#31](https://github.com/SemilleroSOLID/clean-architecture-api/issues/31).
 
-**Estado:** decisiones tomadas por el equipo el 10 de octubre de 2026, pendientes de validar con la profesora. Implementado con el patrón State en [#31](https://github.com/SemilleroSOLID/clean-architecture-api/issues/31).
+Puntos de partida que ya estaban acordados antes de dibujarlo:
 
-## Lo que ya está decidido
-
-- Una convocatoria nueva queda en estado **Abierta** (aprobado por la profesora, ver [#7](https://github.com/SemilleroSOLID/clean-architecture-api/issues/7)).
-- El sistema no rechaza solicitudes automáticamente: las que no cumplen quedan pendientes y las decide el administrador ([#14](https://github.com/SemilleroSOLID/clean-architecture-api/issues/14), [#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17)).
-- Una convocatoria con solicitudes no se elimina; ese caso se resuelve cancelándola ([#10](https://github.com/SemilleroSOLID/clean-architecture-api/issues/10)).
-- Hoy el código solo tiene `OPEN` y `CLOSED`, y nada cambia el estado después de crear la convocatoria.
+- Una convocatoria nueva queda **Abierta** (aprobado por la profesora en [#7](https://github.com/SemilleroSOLID/clean-architecture-api/issues/7)).
+- El sistema no rechaza solicitudes por su cuenta. Las que no cumplen quedan pendientes y las decide el administrador ([#14](https://github.com/SemilleroSOLID/clean-architecture-api/issues/14), [#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17)).
+- Una convocatoria con solicitudes no se borra; se cancela ([#10](https://github.com/SemilleroSOLID/clean-architecture-api/issues/10)).
 
 ## Diagrama
+
+Cada caja es un estado y cada flecha un evento que lo cambia. La flecha que sale del punto negro marca el estado inicial.
 
 ```mermaid
 stateDiagram-v2
@@ -29,57 +28,58 @@ stateDiagram-v2
 
 ## Estados
 
-| Estado | Significado |
+| Estado | Qué significa |
 |---|---|
-| **Abierta** (`OPEN`) | Estado inicial. Publicada y vigente; recibe solicitudes solo mientras la fecha actual está entre la fecha de inicio y la de fin. Antes de la fecha de inicio el front muestra "Abre el dd/mm/aaaa". |
-| **Cerrada** (`CLOSED`) | Ya no recibe solicitudes. El administrador revisa y decide las solicitudes que llegaron. Se puede reabrir con una nueva fecha de fin. |
-| **Finalizada** (`FINISHED`, nuevo) | Todas las solicitudes fueron aprobadas o rechazadas. Queda solo para consulta. |
-| **Cancelada** (`CANCELLED`, nuevo) | Se suspendió antes de terminar el proceso, con una justificación. Reemplaza la eliminación cuando ya hay solicitudes. Queda solo para consulta. |
+| Abierta (`OPEN`) | Es el estado inicial. Recibe solicitudes solo entre la fecha de inicio y la de fin; antes de la fecha de inicio el front muestra "Abre el dd/mm/aaaa". |
+| Cerrada (`CLOSED`) | Ya no recibe solicitudes y el administrador decide las que llegaron. Se puede reabrir con una nueva fecha de fin. |
+| Finalizada (`FINISHED`) | Todas las solicitudes quedaron aprobadas o rechazadas. Solo se consulta. |
+| Cancelada (`CANCELLED`) | Se suspendió antes de terminar, con una justificación. Es lo que se hace en lugar de borrar cuando ya hay solicitudes. Solo se consulta. |
 
 ## Transiciones
 
-| Desde | Hacia | Evento | Quién | Condición | Efecto |
-|---|---|---|---|---|---|
-| (inicio) | Abierta | Crear convocatoria | Administrador | Validaciones del CU-001 | — |
-| Abierta | Cerrada | Pasa la fecha de fin | Sistema (automático) | Fecha actual > fecha de fin | Deja de recibir solicitudes |
-| Abierta | Cerrada | Cerrar anticipadamente | Administrador | — | Deja de recibir solicitudes |
-| Cerrada | Abierta | Reabrir | Administrador | Nueva fecha de fin posterior a hoy | Vuelve a recibir solicitudes; las ya decididas se conservan |
-| Cerrada | Finalizada | Finalizar | Administrador | Ninguna solicitud pendiente ni activa | Queda solo para consulta |
-| Abierta / Cerrada | Cancelada | Cancelar | Administrador | Justificación obligatoria | Se notifica a los estudiantes con solicitudes ([#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20)) |
-| Abierta | (se borra) | Eliminar | Administrador | Sin solicitudes | Se borran la convocatoria y sus requisitos (ya implementado en #10) |
+| Desde | Hacia | Evento | Quién | Condición |
+|---|---|---|---|---|
+| (inicio) | Abierta | Crear la convocatoria | Administrador | Las validaciones del CU-001 |
+| Abierta | Cerrada | Pasa la fecha de fin | El sistema | Hoy es posterior a la fecha de fin |
+| Abierta | Cerrada | Cerrar antes de tiempo | Administrador | — |
+| Cerrada | Abierta | Reabrir | Administrador | Una nueva fecha de fin posterior a hoy. Las solicitudes ya decididas se conservan. |
+| Cerrada | Finalizada | Finalizar | Administrador | Ninguna solicitud pendiente ni activa |
+| Abierta o Cerrada | Cancelada | Cancelar | Administrador | Justificación obligatoria |
+| Abierta | (se borra) | Eliminar | Administrador | Que no tenga solicitudes |
 
-## Acciones permitidas en cada estado
+Al cancelar no se envía correo a los estudiantes. Los correos que existen hoy son los de cambio de estado de una solicitud ([#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20)).
+
+## Qué se puede hacer en cada estado
 
 | Acción | Abierta | Cerrada | Finalizada | Cancelada |
 |---|---|---|---|---|
 | Consultar | ✅ | ✅ | ✅ | ✅ |
-| Editar título, tipo y descripción ([#9](https://github.com/SemilleroSOLID/clean-architecture-api/issues/9)) | ✅ | ❌ | ❌ | ❌ |
-| Editar fechas | ✅ | ❌ | ❌ | ❌ |
-| Editar requisitos | ✅ solo si no tiene solicitudes | ❌ | ❌ | ❌ |
+| Editar título, tipo, descripción y fechas ([#9](https://github.com/SemilleroSOLID/clean-architecture-api/issues/9)) | ✅ | ❌ | ❌ | ❌ |
+| Editar requisitos | ✅ si no tiene solicitudes | ❌ | ❌ | ❌ |
 | Recibir solicitudes ([#13](https://github.com/SemilleroSOLID/clean-architecture-api/issues/13)) | ✅ dentro de las fechas | ❌ | ❌ | ❌ |
 | Aprobar o rechazar solicitudes ([#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17)) | ❌ | ✅ | ❌ | ❌ |
 | Cerrar | ✅ | — | — | — |
 | Reabrir | — | ✅ con nueva fecha de fin | ❌ | ❌ |
 | Finalizar | ❌ | ✅ si todo está decidido | — | — |
 | Cancelar | ✅ | ✅ | ❌ | — |
-| Eliminar ([#10](https://github.com/SemilleroSOLID/clean-architecture-api/issues/10)) | ✅ solo sin solicitudes | ❌ | ❌ | ❌ |
+| Eliminar ([#10](https://github.com/SemilleroSOLID/clean-architecture-api/issues/10)) | ✅ sin solicitudes | ❌ | ❌ | ❌ |
 
-Editar los requisitos con solicitudes ya enviadas cambiaría las reglas para quienes ya se postularon, por eso se bloquea. Las solicitudes se deciden con la convocatoria cerrada para comparar a todos los postulantes juntos; si el administrador quiere decidir antes, puede cerrarla anticipadamente.
+Dos reglas de esta tabla merecen explicación. Los requisitos no se editan cuando ya hay solicitudes porque se le cambiarían las condiciones a quien ya se postuló. Y las solicitudes se deciden con la convocatoria cerrada para comparar a todos los postulantes al mismo tiempo; si el administrador necesita decidir antes, puede cerrarla antes de la fecha.
 
-## Decisiones
+## Decisiones del equipo
 
-Tomadas por el equipo el 10 de octubre de 2026 para no detener el desarrollo. Se presentan a la profesora para validarlas; si cambia algo, se ajusta este documento.
+Estas preguntas quedaron abiertas en el diseño y el equipo las resolvió el 10 de octubre de 2026 para no frenar el desarrollo.
 
-| # | Pregunta | Decisión | Por qué |
-|---|---|---|---|
-| 1 | ¿Hace falta un estado "Programada"? | **No.** | Se mantiene "Abierta" como estado inicial (ya aprobado) y la condición de fechas controla cuándo recibe solicitudes. Un estado más agrega complejidad sin beneficio real. |
-| 2 | ¿Se deciden solicitudes con la convocatoria abierta? | **No, solo cuando está Cerrada.** | Es más justo comparar a todos los postulantes cuando ya se postularon todos. El administrador puede cerrarla anticipadamente si necesita decidir antes. |
-| 3 | ¿El paso a Cerrada es automático? | **Sí, calculado en el dominio.** | Si está Abierta y ya pasó la fecha de fin, la entidad `Convocation` la trata como Cerrada al consultarla o al intentar una acción. No necesita una tarea programada y la regla queda en el dominio. |
-| 4 | ¿Se puede reabrir una convocatoria cerrada? | **Sí, con una nueva fecha de fin posterior a hoy.** | Permite dar más plazo, por ejemplo si se presentaron pocos estudiantes. La nueva fecha es obligatoria porque si no el cierre automático la volvería a cerrar. Finalizada y Cancelada siguen siendo definitivas. |
+| Pregunta | Decisión | Razón |
+|---|---|---|
+| ¿Hace falta un estado "Programada" para antes de la fecha de inicio? | No. | Con "Abierta" y la condición de fechas alcanza. Un estado más complica el modelo sin aportar nada. |
+| ¿Se pueden decidir solicitudes con la convocatoria abierta? | No, solo cerrada. | Es más justo comparar cuando ya se postularon todos. |
+| ¿El paso a Cerrada es automático? | Sí, y lo calcula el dominio. | Si está abierta y ya pasó la fecha de fin, `Convocation` la trata como cerrada al consultarla. No hace falta una tarea programada. |
+| ¿Se puede reabrir una cerrada? | Sí, con una nueva fecha de fin. | Sirve para dar más plazo si se postularon pocos. La fecha nueva es obligatoria porque sin ella el cierre automático la volvería a cerrar. |
 
 ## Implementación: patrón State
 
-**Decisión ([#31](https://github.com/SemilleroSOLID/clean-architecture-api/issues/31)):** se aplica el patrón State. Con cuatro estados, seis transiciones y reglas distintas en cada estado, sin el patrón las reglas terminarían como condicionales `if (estado == ...)` repetidos en los servicios. Con el patrón, cada estado es una clase del dominio que decide qué acciones permite y a qué estado pasa, y agregar un estado nuevo no obliga a modificar los servicios (principio abierto/cerrado).
+Con cuatro estados y reglas distintas en cada uno, sin un patrón el servicio terminaría lleno de `if (estado == ...)` repetidos. Con el patrón State cada estado es una clase del dominio que sabe qué acciones permite y a qué estado lleva cada una. Agregar un estado nuevo no obliga a tocar los servicios, que es el principio abierto/cerrado.
 
 ```mermaid
 classDiagram
@@ -138,10 +138,13 @@ classDiagram
     BaseConvocationState <|-- CancelledState
 ```
 
-- **Dónde está:** `src/main/java/com/example/demo/Domain/States`. Es código del dominio, sin Spring ni JPA; en la base de datos se sigue guardando solo el id del estado (`stateConvocationId`).
-- **Cómo funciona:** `BaseConvocationState` rechaza todas las acciones por defecto con el mensaje *"No se puede {acción} una convocatoria {estado}"* (respuesta 400). Cada estado sobrescribe solo lo que permite. `Convocation` no conoce las reglas: delega en el objeto de su estado actual, que obtiene de `ConvocationStates`.
-- **Servicio:** `ConvocationService` carga la convocatoria, aplica la regla de fechas (cierre automático) y llama al método de la convocatoria. No tiene condicionales sobre el estado.
-- **Pruebas:** `ConvocationStateTest` cubre cada transición válida e inválida de los cuatro estados.
+Cómo está armado:
+
+- Las clases están en `src/main/java/com/example/demo/Domain/States`. Son código del dominio, sin Spring ni JPA. En la base se sigue guardando solo el número del estado (`stateConvocationId`).
+- `BaseConvocationState` rechaza todas las acciones con el mensaje *"No se puede {acción} una convocatoria {estado}"*, que llega como un 400. Cada estado sobrescribe solo lo que sí permite.
+- `Convocation` no conoce las reglas. Le pide a `ConvocationStates.of(...)` el objeto de su estado actual y le delega la acción.
+- `ConvocationService` carga la convocatoria, aplica el cierre automático por fecha y llama al método de la entidad, sin preguntar por el estado.
+- `ConvocationStateTest` prueba cada transición válida e inválida de los cuatro estados.
 
 | Acción | Endpoint |
 |---|---|
@@ -150,11 +153,9 @@ classDiagram
 | Finalizar | `PUT /convocation/finishConvocation/{id}` |
 | Cancelar | `PUT /convocation/cancelConvocation/{id}` con `{ "reason": "..." }` |
 
-La notificación a los estudiantes al cancelar queda para [#20](https://github.com/SemilleroSOLID/clean-architecture-api/issues/20). Los estados de la solicitud usan el mismo patrón desde [#19](https://github.com/SemilleroSOLID/clean-architecture-api/issues/19) (ver el anexo).
-
 ## Anexo: estados de una solicitud
 
-Implementado en [#14](https://github.com/SemilleroSOLID/clean-architecture-api/issues/14), [#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17) y [#19](https://github.com/SemilleroSOLID/clean-architecture-api/issues/19):
+La solicitud tiene su propio ciclo, implementado en [#14](https://github.com/SemilleroSOLID/clean-architecture-api/issues/14), [#17](https://github.com/SemilleroSOLID/clean-architecture-api/issues/17) y [#19](https://github.com/SemilleroSOLID/clean-architecture-api/issues/19).
 
 ```mermaid
 stateDiagram-v2
@@ -172,18 +173,18 @@ stateDiagram-v2
     Retirada --> [*]
 ```
 
-Al enviarla, la verificación automática la deja **Activa** si cumple todos los requisitos o **Pendiente** si no cumple alguno. Las dos esperan la decisión del administrador y tienen las mismas salidas; la diferencia es que en una solicitud pendiente el administrador ve qué requisitos no se cumplieron. El sistema nunca la rechaza por sí solo.
+Al enviarla, la verificación automática la deja **Activa** si cumple todos los requisitos o **Pendiente** si falla alguno. Las dos esperan al administrador y tienen las mismas salidas. La diferencia está en lo que ve el administrador: en una pendiente aparecen los requisitos que no se cumplieron.
 
 | Estado | Enum | Qué se puede hacer |
 |---|---|---|
-| **Pendiente** / **Activa** | `PENDING` / `ACTIVE` | El administrador la aprueba o la rechaza (con justificación) cuando la convocatoria está cerrada. El estudiante dueño la puede retirar en cualquier momento. |
-| **Aprobada** | `ACCEPT` | Nada: es final. |
-| **Rechazada** | `REJECT` | Nada: es final. El estudiante ve la justificación en *Mis solicitudes*. |
-| **Retirada** | `CANCELLED` | Nada: es final. Ya no cuenta para la selección. Se conserva para el historial en vez de borrarla. |
+| Pendiente o Activa | `PENDING`, `ACTIVE` | El administrador la aprueba o la rechaza (con justificación) cuando la convocatoria está cerrada. El estudiante la puede retirar en cualquier momento. |
+| Aprobada | `ACCEPT` | Nada, es final. |
+| Rechazada | `REJECT` | Nada, es final. El estudiante ve la justificación en *Mis solicitudes*. |
+| Retirada | `CANCELLED` | Nada, es final. Se guarda para el historial en vez de borrarla. |
 
 ### Implementación: patrón State
 
-Con tres acciones (aprobar, rechazar, retirar) y cinco estados, se aplica el mismo patrón que a la convocatoria. `Request` delega en el objeto de su estado; `BaseRequestState` rechaza todo con *"No se puede {acción} una solicitud {estado}"* y solo `ReviewRequestState`, que comparten `PENDING` y `ACTIVE`, permite las tres acciones. Que la convocatoria esté cerrada para decidir lo responde la convocatoria con su propio estado (`ensureCanDecideRequests`). Pruebas en `RequestStateTest` y `RequestDecisionTest`.
+Se usa el mismo patrón que en la convocatoria. `Request` delega en el objeto de su estado. `BaseRequestState` rechaza todo con *"No se puede {acción} una solicitud {estado}"*, y solo `ReviewRequestState`, que comparten `PENDING` y `ACTIVE`, permite aprobar, rechazar y retirar. Si la convocatoria está cerrada o no lo responde la propia convocatoria con su estado (`ensureCanDecideRequests`). Las pruebas están en `RequestStateTest` y `RequestDecisionTest`.
 
 ```mermaid
 classDiagram
@@ -228,4 +229,4 @@ classDiagram
 |---|---|
 | Aprobar | `PUT /request/approveRequest/{id}` |
 | Rechazar | `PUT /request/rejectRequest/{id}` con `{ "comment": "..." }` |
-| Retirar | `PUT /request/cancelRequest/{id}` con `{ "studentId": ... }` (403 si no es el dueño; el estudiante vendrá del login en #22) |
+| Retirar | `PUT /request/cancelRequest/{id}`. El estudiante sale del token, y si la solicitud no es suya la respuesta es 403. |
