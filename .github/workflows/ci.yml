@@ -1,0 +1,57 @@
+# Continuous integration (issue #26): every push to main compiles, runs the tests and builds the Docker images.
+# A commit that breaks the compilation or a test leaves the workflow in red.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v6
+      # gradlew is not executable in git, so it runs with bash (like the Dockerfile)
+      - name: Compile and run the unit tests
+        run: bash ./gradlew build jacocoTestReport
+      - name: Test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unit-test-reports
+          path: |
+            build/reports/tests/test
+            build/reports/jacoco/test/html
+      # The same two images docker compose builds for this repo
+      - name: Build the Docker image of the api
+        run: docker build -t clean-architecture-api-backend .
+      - name: Build the Docker image of SQL Server
+        run: docker build -f sqlserver.Dockerfile -t clean-architecture-api-sqlserver .
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v6
+      # Testcontainers builds the SQL Server image from sqlserver.Dockerfile, because the runner does not have it
+      - name: Run the integration tests against SQL Server
+        run: bash ./gradlew integrationTest
+      - name: Test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-test-reports
+          path: build/reports/tests/integrationTest

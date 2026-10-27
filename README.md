@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/SemilleroSOLID/clean-architecture-api/actions/workflows/ci.yml"><img src="https://github.com/SemilleroSOLID/clean-architecture-api/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <img src="https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 17" />
   <img src="https://img.shields.io/badge/Spring%20Boot-3.2.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot 3.2.5" />
   <img src="https://img.shields.io/badge/Hibernate-JPA-59666C?style=for-the-badge&logo=hibernate&logoColor=white" alt="Hibernate JPA" />
@@ -1118,6 +1119,8 @@ Se trabaja con **fork**, así varias personas pueden hacer cambios a la vez sin 
 5. Antes de subir: `./gradlew test` y las búsquedas de [la regla de dependencias](#cómo-se-cumple-la-regla-de-dependencias).
 6. `git push origin <rama>` y, si quieres que el cambio llegue al repositorio principal, un **Pull Request** hacia `main` que mencione la issue (por ejemplo `#32`).
 
+**Integración continua.** Cada push a `main` y cada Pull Request corren [GitHub Actions](.github/workflows/ci.yml): compila, corre las pruebas unitarias y las de integración y construye las imágenes Docker. Si algo se rompe, el commit o el PR queda con una ✗ roja y el badge del inicio pasa a *failing*; en la pestaña **Actions** se ve qué paso falló y se pueden descargar los reportes de las pruebas. En un fork, GitHub deja los workflows apagados: actívalos una vez en la pestaña **Actions** de tu fork y correrán también en tus ramas cuando abras el PR. El front y las notificaciones tienen su propio workflow.
+
 Los mensajes de commit siguen el estilo del historial: en inglés y con un prefijo que dice qué tipo de cambio es (`feat:`, `fix:`, `test:`, `docs:`).
 
 ## Diagramas
@@ -1137,7 +1140,6 @@ Las cuatro fases del backlog (convocatorias, solicitudes, gestión y notificacio
 | Issue | Qué falta | Quién |
 |---|---|---|
 | [#28](https://github.com/SemilleroSOLID/clean-architecture-api/issues/28) | Diagramas de secuencia por capas (mostrando el dominio), de despliegue y entidad-relación. | Asignada |
-| [#26](https://github.com/SemilleroSOLID/clean-architecture-api/issues/26) | GitHub Actions: compilar y correr las pruebas en cada push. | Asignada |
 | [#32](https://github.com/SemilleroSOLID/clean-architecture-api/issues/32) | Pruebas de `ConvocationService`. | Abierta: cualquiera, en su fork |
 | [#33](https://github.com/SemilleroSOLID/clean-architecture-api/issues/33) | Pruebas de `RequestService`. | Abierta: cualquiera, en su fork |
 | [#34](https://github.com/SemilleroSOLID/clean-architecture-api/issues/34) | Pruebas de `RequirementService`, `AuthService` y los mappers. | Abierta: cualquiera, en su fork |
