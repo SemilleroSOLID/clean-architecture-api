@@ -172,16 +172,16 @@ El código se divide en capas concéntricas con una sola regla:
 
 ```mermaid
 flowchart TB
-    subgraph L4["Api · Infrastructure  —  detalles: web, base de datos, mensajería"]
+    subgraph L4["Api · Infrastructure"]
         subgraph L2["Application  —  casos de uso"]
             subgraph L1["Domain  —  reglas del negocio"]
                 D["Entidades · Enums · Estados<br/>Excepciones · Interfaces de repositorio"]
             end
         end
     end
-    style L1 fill:#fff3c4,stroke:#c9a400
-    style L2 fill:#dbeafe,stroke:#3b82f6
-    style L4 fill:#e5e7eb,stroke:#6b7280
+    style L1 fill:#eab30833,stroke:#c9a400
+    style L2 fill:#3b82f629,stroke:#3b82f6
+    style L4 fill:#80808024,stroke:#6b7280
 ```
 
 Lo que se gana:
@@ -452,18 +452,18 @@ Ejemplo: el administrador cierra la convocatoria 5 con `PUT /convocation/closeCo
 sequenceDiagram
     autonumber
     actor Admin as Administrador
-    box rgba(229,231,235,0.6) Api
+    box rgba(128,128,128,0.14) Api
         participant Ctrl as ConvocationController
     end
-    box rgba(219,234,254,0.6) Application
+    box rgba(59,130,246,0.16) Application
         participant Svc as ConvocationService
     end
-    box rgba(255,243,196,0.8) Domain
+    box rgba(234,179,8,0.20) Domain
         participant Port as IConvocationRepository<br/>(puerto)
         participant Conv as Convocation
         participant St as Estado actual<br/>(OpenState, ClosedState...)
     end
-    box rgba(229,231,235,0.6) Infrastructure
+    box rgba(128,128,128,0.14) Infrastructure
         participant Repo as ConvocationRepository<br/>(adaptador JPA)
         participant DB as SQL Server
     end
@@ -536,19 +536,19 @@ Así se ve al aprobar una solicitud. Las reglas (que la solicitud esté en revis
 sequenceDiagram
     autonumber
     actor Admin as Administrador
-    box rgba(229,231,235,0.6) Api
+    box rgba(128,128,128,0.14) Api
         participant Ctrl as RequestController
     end
-    box rgba(219,234,254,0.6) Application
+    box rgba(59,130,246,0.16) Application
         participant Svc as RequestService
         participant Pub as IRabbitMQSender<br/>(puerto)
     end
-    box rgba(255,243,196,0.8) Domain
+    box rgba(234,179,8,0.20) Domain
         participant Req as Request
         participant St as ReviewRequestState<br/>(patrón State)
         participant Conv as Convocation
     end
-    box rgba(229,231,235,0.6) Infrastructure
+    box rgba(128,128,128,0.14) Infrastructure
         participant Repo as RequestRepository
         participant MQ as RabbitMQSender
     end
@@ -595,20 +595,20 @@ Todos los endpoints, salvo el login y `/test/hello`, piden un token. Hay dos rol
 sequenceDiagram
     autonumber
     actor U as Usuario
-    box rgba(229,231,235,0.6) Api
+    box rgba(128,128,128,0.14) Api
         participant Auth as AuthController
         participant F as JwtAuthenticationFilter
         participant Ctrl as RequestController
     end
-    box rgba(219,234,254,0.6) Application
+    box rgba(59,130,246,0.16) Application
         participant Svc as AuthService
         participant Ports as IPasswordHasher<br/>ITokenProvider (puertos)
     end
-    box rgba(255,243,196,0.8) Domain
+    box rgba(234,179,8,0.20) Domain
         participant UPort as IUserRepository<br/>(puerto)
         participant User as User
     end
-    box rgba(229,231,235,0.6) Infrastructure
+    box rgba(128,128,128,0.14) Infrastructure
         participant Adapters as BCryptPasswordHasher<br/>JwtTokenProvider<br/>UserRepository
     end
 

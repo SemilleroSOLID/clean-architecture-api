@@ -34,20 +34,20 @@ sequenceDiagram
     autonumber
     actor Admin as Administrador
     participant Front as Front React
-    box rgba(229,231,235,0.6) Api
+    box rgba(128,128,128,0.14) Api
         participant Ctrl as ConvocationController
         participant Err as GlobalExceptionHandler
     end
-    box rgba(219,234,254,0.6) Application
+    box rgba(59,130,246,0.16) Application
         participant Svc as ConvocationService
         participant Map as ConvocationMapper
     end
-    box rgba(255,243,196,0.8) Domain
+    box rgba(234,179,8,0.20) Domain
         participant Conv as Convocation
         participant CReq as ConvocationRequirement
         participant Port as IRequirementRepository<br/>IConvocationRepository<br/>IConvocationRequirementRepository<br/>(puertos)
     end
-    box rgba(229,231,235,0.6) Infrastructure
+    box rgba(128,128,128,0.14) Infrastructure
         participant Repo as RequirementRepository<br/>ConvocationRepository...<br/>(adaptadores JPA)
     end
     participant DB as SQL Server
@@ -100,20 +100,20 @@ Ejemplo con *cerrar*. Las cuatro acciones (cerrar, reabrir, finalizar y cancelar
 sequenceDiagram
     autonumber
     actor Admin as Administrador
-    box rgba(229,231,235,0.6) Api
+    box rgba(128,128,128,0.14) Api
         participant Ctrl as ConvocationController
         participant Err as GlobalExceptionHandler
     end
-    box rgba(219,234,254,0.6) Application
+    box rgba(59,130,246,0.16) Application
         participant Svc as ConvocationService
     end
-    box rgba(255,243,196,0.8) Domain
+    box rgba(234,179,8,0.20) Domain
         participant Conv as Convocation
         participant States as ConvocationStates<br/>(fábrica)
         participant St as Estado actual<br/>OpenState, ClosedState...
         participant Port as IConvocationRepository<br/>(puerto)
     end
-    box rgba(229,231,235,0.6) Infrastructure
+    box rgba(128,128,128,0.14) Infrastructure
         participant Repo as ConvocationRepository<br/>(adaptador JPA)
     end
     participant DB as SQL Server
@@ -170,22 +170,22 @@ El estudiante se postula con un valor para cada requisito. Las comprobaciones va
 sequenceDiagram
     autonumber
     actor Est as Estudiante
-    box rgba(229,231,235,0.6) Api
+    box rgba(128,128,128,0.14) Api
         participant Ctrl as RequestController
         participant Err as GlobalExceptionHandler
     end
-    box rgba(219,234,254,0.6) Application
+    box rgba(59,130,246,0.16) Application
         participant Svc as RequestService
         participant Pub as IRabbitMQSender<br/>(puerto)
     end
-    box rgba(255,243,196,0.8) Domain
+    box rgba(234,179,8,0.20) Domain
         participant Conv as Convocation
         participant St as OpenState
         participant Req as Request
         participant CReq as ConvocationRequirement
         participant Port as IStudentRepository<br/>IConvocationRepository<br/>IRequestRepository...<br/>(puertos)
     end
-    box rgba(229,231,235,0.6) Infrastructure
+    box rgba(128,128,128,0.14) Infrastructure
         participant Repo as Repositorios JPA<br/>(adaptadores)
         participant Snd as RabbitMQSender<br/>(adaptador)
     end
@@ -254,22 +254,22 @@ Cuando la convocatoria está cerrada, el administrador decide las solicitudes. L
 sequenceDiagram
     autonumber
     actor Admin as Administrador
-    box rgba(229,231,235,0.6) Api
+    box rgba(128,128,128,0.14) Api
         participant Ctrl as RequestController
         participant Err as GlobalExceptionHandler
     end
-    box rgba(219,234,254,0.6) Application
+    box rgba(59,130,246,0.16) Application
         participant Svc as RequestService
         participant Pub as IRabbitMQSender<br/>(puerto)
     end
-    box rgba(255,243,196,0.8) Domain
+    box rgba(234,179,8,0.20) Domain
         participant Req as Request
         participant RSt as Estado de la solicitud<br/>RequestStates.of(...)
         participant Conv as Convocation
         participant CSt as Estado de la convocatoria<br/>ConvocationStates.of(...)
         participant Port as IRequestRepository<br/>IConvocationRepository...<br/>(puertos)
     end
-    box rgba(229,231,235,0.6) Infrastructure
+    box rgba(128,128,128,0.14) Infrastructure
         participant Repo as Repositorios JPA<br/>(adaptadores)
         participant Snd as RabbitMQSender<br/>(adaptador)
     end
@@ -324,21 +324,21 @@ El estudiante retira una solicitud mientras está en revisión. Hay dos reglas: 
 sequenceDiagram
     autonumber
     actor Est as Estudiante
-    box rgba(229,231,235,0.6) Api
+    box rgba(128,128,128,0.14) Api
         participant Ctrl as RequestController
         participant Err as GlobalExceptionHandler
     end
-    box rgba(219,234,254,0.6) Application
+    box rgba(59,130,246,0.16) Application
         participant Svc as RequestService
         participant Pub as IRabbitMQSender<br/>(puerto)
     end
-    box rgba(255,243,196,0.8) Domain
+    box rgba(234,179,8,0.20) Domain
         participant Req as Request
         participant States as RequestStates<br/>(fábrica)
         participant RSt as Estado de la solicitud<br/>ReviewRequestState, AcceptedRequestState...
         participant Port as IRequestRepository<br/>(puerto)
     end
-    box rgba(229,231,235,0.6) Infrastructure
+    box rgba(128,128,128,0.14) Infrastructure
         participant Repo as RequestRepository<br/>(adaptador JPA)
         participant Snd as RabbitMQSender<br/>(adaptador)
     end
@@ -390,28 +390,28 @@ sequenceDiagram
     autonumber
     actor U as Usuario
     participant Front as Front React<br/>AuthProvider
-    box rgba(229,231,235,0.6) Api
+    box rgba(128,128,128,0.14) Api
         participant Filter as JwtAuthenticationFilter<br/>SecurityConfig
         participant Ctrl as AuthController<br/>RequestController
         participant Err as GlobalExceptionHandler<br/>SecurityErrorWriter
     end
-    box rgba(219,234,254,0.6) Application
+    box rgba(59,130,246,0.16) Application
         participant Svc as AuthService
         participant Hash as IPasswordHasher<br/>(puerto)
         participant Tok as ITokenProvider<br/>(puerto)
     end
-    box rgba(255,243,196,0.8) Domain
+    box rgba(234,179,8,0.20) Domain
         participant UPort as IUserRepository<br/>(puerto)
         participant User as User
     end
-    box rgba(229,231,235,0.6) Infrastructure
+    box rgba(128,128,128,0.14) Infrastructure
         participant URepo as UserRepository<br/>(adaptador JPA)
         participant BCrypt as BCryptPasswordHasher
         participant Jwt as JwtTokenProvider
     end
     participant DB as SQL Server
 
-    rect rgba(240,240,240,0.4)
+    rect rgba(128,128,128,0.08)
     Note over U,DB: Iniciar sesión
     U->>Front: correo y contraseña
     Front->>Ctrl: POST /auth/login (ruta pública)
@@ -436,7 +436,7 @@ sequenceDiagram
     end
     end
 
-    rect rgba(240,240,240,0.4)
+    rect rgba(128,128,128,0.08)
     Note over U,DB: Cada petición siguiente
     Front->>Filter: GET /request/getMyRequests<br/>Authorization: Bearer token
     Filter->>Tok: read(token)

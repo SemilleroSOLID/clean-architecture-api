@@ -36,9 +36,9 @@ flowchart LR
     Rabbit --- V2
     Mail --- V3
 
-    classDef app fill:#dbeafe,stroke:#3b82f6,color:#111
-    classDef infra fill:#fef3c7,stroke:#d97706,color:#111
-    classDef vol fill:#f3f4f6,stroke:#6b7280,color:#111
+    classDef app fill:#3b82f629,stroke:#3b82f6
+    classDef infra fill:#eab30833,stroke:#d97706
+    classDef vol fill:#80808024,stroke:#6b7280
     class Front,Backend,Notif app
     class SQL,Rabbit,Mail infra
     class V1,V2,V3 vol
